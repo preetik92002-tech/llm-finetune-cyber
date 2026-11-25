@@ -1,7 +1,7 @@
 """Collect raw data: NVD CVEs (2022-2025) and the MITRE ATT&CK STIX bundle.
 
 Output (in data/raw/):
-  - nvd_cves_<year>.json   one file per year, slim records
+  - nvd_cves_<year>.json   one file per year, full NVD cve objects
   - mitre_enterprise_attack.json   full STIX bundle
 
 Usage:
@@ -75,34 +75,6 @@ def get_with_retry(url, params=None, headers=None):
     raise RuntimeError(f"Gave up after {MAX_RETRIES} tries: {url}")
 
 
-def slim_cve(item):
-    """Keep only id, dates, English description and CVSS base severity."""
-    cve = item["cve"]
-    description = next(
-        (d["value"] for d in cve.get("descriptions", []) if d.get("lang") == "en"), ""
-    )
-
-    # Prefer the newest CVSS version available. v3.x keeps baseSeverity inside
-    # cvssData; v2 keeps it at the metric level.
-    severity, score = None, None
-    metrics = cve.get("metrics", {})
-    for key in ("cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2"):
-        if metrics.get(key):
-            metric = metrics[key][0]
-            data = metric["cvssData"]
-            severity = data.get("baseSeverity") or metric.get("baseSeverity")
-            score = data.get("baseScore")
-            break
-
-    return {
-        "id": cve["id"],
-        "published": cve.get("published"),
-        "description": description,
-        "cvss_base_severity": severity,
-        "cvss_base_score": score,
-    }
-
-
 def date_windows(year):
     """Split a year into <=120-day windows, as the NVD API requires."""
     start = datetime(year, 1, 1, tzinfo=timezone.utc)
@@ -119,7 +91,12 @@ def fmt(dt):
 
 
 def collect_nvd():
-    """Download CVEs year by year, page by page, and save one file per year."""
+    """Download CVEs year by year and save one file per year.
+
+    Full NVD records are kept (source, CWE, status, all CVSS metrics) because
+    clean_cves.py needs them. Records are streamed to disk as each page
+    arrives, so memory stays low on small machines.
+    """
     headers = {"apiKey": API_KEY} if API_KEY else {}
     if not API_KEY:
         print("No NVD_API_KEY set: using the slow public rate limit.")
@@ -130,27 +107,33 @@ def collect_nvd():
             print(f"{year}: already downloaded, skipping")
             continue
 
-        records = []
-        for start, end in date_windows(year):
-            index = 0
-            while True:
-                params = {
-                    "pubStartDate": fmt(start),
-                    "pubEndDate": fmt(end),
-                    "resultsPerPage": PAGE_SIZE,
-                    "startIndex": index,
-                }
-                data = get_with_retry(NVD_URL, params, headers).json()
-                records.extend(slim_cve(v) for v in data.get("vulnerabilities", []))
-                index += data.get("resultsPerPage", 0)
-                total = data.get("totalResults", 0)
-                print(f"{year} {start:%Y-%m-%d}: {min(index, total)}/{total}")
-                if index >= total or data.get("resultsPerPage", 0) == 0:
-                    break
+        part_file = out_file.with_suffix(".json.part")  # renamed when complete
+        count = 0
+        with part_file.open("w", encoding="utf-8") as f:
+            f.write("[")
+            for start, end in date_windows(year):
+                index = 0
+                while True:
+                    params = {
+                        "pubStartDate": fmt(start),
+                        "pubEndDate": fmt(end),
+                        "resultsPerPage": PAGE_SIZE,
+                        "startIndex": index,
+                    }
+                    data = get_with_retry(NVD_URL, params, headers).json()
+                    for item in data.get("vulnerabilities", []):
+                        f.write(",\n" if count else "\n")
+                        json.dump(item["cve"], f)
+                        count += 1
+                    index += data.get("resultsPerPage", 0)
+                    total = data.get("totalResults", 0)
+                    print(f"{year} {start:%Y-%m-%d}: {min(index, total)}/{total}")
+                    if index >= total or data.get("resultsPerPage", 0) == 0:
+                        break
+            f.write("\n]")
 
-        out_file.write_text(json.dumps(records, indent=1), encoding="utf-8")
-        print(f"{year}: saved {len(records)} CVEs -> {out_file}")
-
+        part_file.replace(out_file)
+        print(f"{year}: saved {count} CVEs -> {out_file}")
 
 def collect_mitre():
     """Download the full ATT&CK Enterprise STIX bundle (one JSON file)."""
