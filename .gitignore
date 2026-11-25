@@ -1,0 +1,25 @@
+# Raw data (large, re-downloadable); keep the folder itself
+data/raw/*
+!data/raw/.gitkeep
+
+# Model weights and checkpoints
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+models/
+checkpoints/
+outputs/
+
+# Secrets
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
