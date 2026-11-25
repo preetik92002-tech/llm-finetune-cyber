@@ -1,0 +1,16 @@
+# Ablation plan. Run: python src/run_ablations.py --config configs/ablations.yaml
+# Every run starts from base_config and changes only LoRA rank and training-set size.
+
+base_config: configs/qlora_main.yaml   # model, learning rate, epochs, max length, seed, ...
+
+# "one_at_a_time": vary rank at default_size, and vary size at default_rank (5 runs).
+# "grid": every rank with every size (9 runs).
+mode: one_at_a_time
+
+ranks: [8, 16, 64]                     # LoRA rank (adapter size)
+sizes: [500, 2000, 5000]               # severity training examples
+default_rank: 16                       # used while the size changes (one_at_a_time)
+default_size: 2000                     # used while the rank changes (one_at_a_time)
+
+alpha_multiplier: 2                    # lora alpha = rank x this (keeps the base config's 16 -> 32 ratio)
+attack_ratio: 1.0                      # ATT&CK examples = size x this. 0 = train on severity only
