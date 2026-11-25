@@ -1,0 +1,28 @@
+{
+  "relationships_total": 21822,
+  "uses_active": 18975,
+  "uses_source_and_target_ok": 16423,
+  "with_description": 16423,
+  "after_cleaning_non_empty": 16423,
+  "after_dedup": 16423,
+  "splits": {
+    "train": {
+      "examples": 13139,
+      "sources": 594,
+      "unique_techniques": 592,
+      "techniques_not_in_train": 0
+    },
+    "val": {
+      "examples": 1642,
+      "sources": 211,
+      "unique_techniques": 286,
+      "techniques_not_in_train": 9
+    },
+    "test": {
+      "examples": 1642,
+      "sources": 211,
+      "unique_techniques": 293,
+      "techniques_not_in_train": 9
+    }
+  }
+}
