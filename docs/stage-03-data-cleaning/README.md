@@ -1,6 +1,6 @@
 # Stage 03: Data cleaning
 
-**Status:** In progress (code written; run it and fill the Results section)
+**Status:** In progress (ran on missing input; `cves_clean.jsonl` is 0 bytes)
 
 Previous: [Stage 02: Data collection](../stage-02-data-collection/README.md) | Home: [README](../../README.md) | Next: [Stage 04: Dataset building](../stage-04-dataset-building/README.md)
 
@@ -64,7 +64,7 @@ Output: `data/processed/cves_clean.jsonl`.
 
 ## Results
 
-Fill these after you run it. Do not guess.
+Current state: `data/processed/cves_clean.jsonl` is 0 bytes, because `data/raw/` has no finished NVD files yet (see stage 02). No counts exist. Fill these after a run on real data. Do not guess.
 
 | Step | Records left |
 |---|---|

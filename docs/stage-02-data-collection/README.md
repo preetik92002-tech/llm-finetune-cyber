@@ -1,6 +1,6 @@
 # Stage 02: Data collection
 
-**Status:** Done (code written; fill the Results section after you run it)
+**Status:** In progress (MITRE file downloaded; NVD yearly files not finished yet)
 
 Previous: [Stage 01: Setup](../stage-01-setup/README.md) | Home: [README](../../README.md) | Next: [Stage 03: Data cleaning](../stage-03-data-cleaning/README.md)
 

@@ -36,9 +36,9 @@ flowchart TD
 | Stage | Topic | Status |
 |---|---|---|
 | [01](docs/stage-01-setup/README.md) | Setup | Done |
-| [02](docs/stage-02-data-collection/README.md) | Data collection | Done (code written; run results not recorded) |
-| [03](docs/stage-03-data-cleaning/README.md) | Data cleaning | In progress |
-| [04](docs/stage-04-dataset-building/README.md) | Dataset building | In progress |
+| [02](docs/stage-02-data-collection/README.md) | Data collection | In progress (MITRE downloaded; NVD files not finished) |
+| [03](docs/stage-03-data-cleaning/README.md) | Data cleaning | In progress (ran on missing input; output is empty) |
+| [04](docs/stage-04-dataset-building/README.md) | Dataset building | In progress (ATT&CK done, severity waits on stage 03) |
 | [05](docs/stage-05-smoke-test/README.md) | Smoke test | Todo |
 | [06](docs/stage-06-qlora-training/README.md) | QLoRA training | Todo |
 | [07](docs/stage-07-evaluation/README.md) | Evaluation | Todo |

@@ -1,6 +1,6 @@
 # Stage 04: Dataset building
 
-**Status:** In progress (code written; run it and fill the Results section)
+**Status:** In progress (ATT&CK part done and measured; severity part has not run on real data yet)
 
 Previous: [Stage 03: Data cleaning](../stage-03-data-cleaning/README.md) | Home: [README](../../README.md) | Next: [Stage 05: Smoke test](../stage-05-smoke-test/README.md)
 
@@ -85,7 +85,42 @@ The two scripts write separate stats files, so the order does not matter.
 
 ## Results
 
-Fill these after you run it. Do not guess.
+Numbers below come from `data/processed/stats.json` (written by the ATT&CK script before the stats files were separated). I also counted the lines of the output files, and they match.
+
+### ATT&CK dataset (done)
+
+| Step | Count |
+|---|---|
+| Relationships in the STIX file (all types) | 21,822 |
+| "uses" relationships that are not revoked or deprecated | 18,975 |
+| ...from a group, malware or tool to a technique | 16,423 |
+| ...with a description | 16,423 |
+| After cleaning (text not empty) | 16,423 |
+| After removing duplicates | 16,423 |
+
+| Split | Examples | Share | Groups or software | Different techniques | Techniques not in train |
+|---|---|---|---|---|---|
+| train | 13,139 | 80.0% | 594 | 592 | 0 |
+| val | 1,642 | 10.0% | 211 | 286 | 9 |
+| test | 1,642 | 10.0% | 211 | 293 | 9 |
+
+How to read this:
+
+- Cleaning and duplicate removal changed no counts in this run. Every kept relationship already had a description, and no two shared the same text and technique.
+- The split came out at 80/10/10.
+- Val and test each hold 9 techniques the model never sees in training. Those can only be answered by generalising.
+- The script is built so each group or software lands in one split only. I have not checked that on the output files.
+
+The first line of `attack_train.jsonl`:
+
+- user: "As part of the data reconnaissance phase, Proxysvc grabs the system time to send back to the control server."
+- assistant: `T1124 System Time Discovery`
+
+### Severity dataset (not done)
+
+The severity script ran on an empty input. `data/processed/cves_clean.jsonl` is 0 bytes, and so are the three `severity_*.jsonl` files. Every severity count in `stats.json` is 0.
+
+The cause is upstream. `data/raw/` has no finished NVD files yet, only a 0-byte `nvd_cves_2022.json.part`. Finish stage 02 and stage 03, then run `build_cve_dataset.py` again.
 
 | Item | Value |
 |---|---|
@@ -97,10 +132,10 @@ Fill these after you run it. Do not guess.
 | Final severity train / val / test | _fill after run_ |
 | Severity mix in final train | _fill after run_ |
 | Severity mix in final val and test | _fill after run_ |
-| ATT&CK "uses" relationships kept after filters | _fill after run_ |
-| ATT&CK examples after dedup | _fill after run_ |
-| ATT&CK train / val / test examples | _fill after run_ |
-| Val and test techniques not seen in train | _fill after run_ |
+
+### Stats file names
+
+Your current `stats.json` is from before the stats files were split. The next run of each script writes `stats_cve.json` and `stats_attack.json`. You can delete the old `stats.json` after that.
 
 ## Common errors and fixes
 
