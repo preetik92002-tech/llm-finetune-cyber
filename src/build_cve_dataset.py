@@ -2,7 +2,7 @@
 
 Input : data/processed/cves_clean.jsonl
 Output: data/processed/severity_{train,val,test}.jsonl
-        data/processed/stats.json   (counts + class distribution after each step)
+        data/processed/stats_cve.json   (counts + class distribution after each step)
 Config: configs/dataset.json (optional; defaults below are used for missing keys)
 
 Steps:
@@ -216,8 +216,9 @@ def main():
         snapshot(stats, f"5_final_{name}", rs)
         write_jsonl(OUT_DIR / f"severity_{name}.jsonl", rs)
 
-    (OUT_DIR / "stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
-    print(f"\nSaved severity_train/val/test.jsonl and stats.json in {OUT_DIR}")
+    # Own file (stats_cve.json) so build_attack_dataset.py never overwrites it.
+    (OUT_DIR / "stats_cve.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
+    print(f"\nSaved severity_train/val/test.jsonl and stats_cve.json in {OUT_DIR}")
 
 
 if __name__ == "__main__":

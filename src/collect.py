@@ -33,7 +33,9 @@ MITRE_URL = (
 YEARS = range(2022, 2026)  # 2022..2025 inclusive
 PAGE_SIZE = 2000  # NVD maximum results per page
 MAX_WINDOW_DAYS = 120  # NVD rejects date ranges longer than 120 days
-MAX_RETRIES = 6
+MAX_RETRIES = 8  # attempts per request before giving up
+BACKOFF_BASE = 10  # first wait in seconds
+BACKOFF_MAX = 300  # never wait longer than 5 minutes
 TIMEOUT = 60  # seconds per HTTP request
 
 API_KEY = os.getenv("NVD_API_KEY")
@@ -44,6 +46,11 @@ MIN_GAP = 0.7 if API_KEY else 6.5
 RAW_DIR = Path(__file__).resolve().parent.parent / "data" / "raw"
 
 _last_call = 0.0
+
+
+def backoff_delay(attempt):
+    """Exponential backoff: 10, 20, 40, 80, 160, 300, 300, ... seconds."""
+    return min(BACKOFF_BASE * 2 ** (attempt - 1), BACKOFF_MAX)
 
 
 def get_with_retry(url, params=None, headers=None):
@@ -59,13 +66,27 @@ def get_with_retry(url, params=None, headers=None):
             resp = requests.get(url, params=params, headers=headers, timeout=TIMEOUT)
         except (requests.ConnectionError, requests.Timeout) as exc:
             print(f"  network error ({exc}); retry {attempt}/{MAX_RETRIES}")
-            time.sleep(min(2**attempt, 60))
+            time.sleep(backoff_delay(attempt))
             continue
 
-        # 403/429 = rate limited (NVD uses 403); 5xx = temporary server trouble.
-        if resp.status_code in (403, 429) or resp.status_code >= 500:
+        # Retryable statuses:
+        #   403/429 = rate limited (NVD answers 403 when over the limit)
+        #   5xx     = temporary server trouble (e.g. 503)
+        #   404     = NVD sometimes returns a temporary 404 on a valid query.
+        #             Only retried for the NVD endpoint: a 404 from any other
+        #             URL (such as the MITRE file) means the URL is really wrong.
+        is_nvd = url.startswith(NVD_URL)
+        retryable = (
+            resp.status_code in (403, 429)
+            or resp.status_code >= 500
+            or (is_nvd and resp.status_code == 404)
+        )
+        if retryable:
             retry_after = resp.headers.get("Retry-After")
-            delay = int(retry_after) if retry_after and retry_after.isdigit() else min(2**attempt * 5, 120)
+            if retry_after and retry_after.isdigit():
+                delay = int(retry_after)  # the server told us how long to wait
+            else:
+                delay = backoff_delay(attempt)
             print(f"  HTTP {resp.status_code}; waiting {delay}s, retry {attempt}/{MAX_RETRIES}")
             time.sleep(delay)
             continue
@@ -107,7 +128,11 @@ def collect_nvd():
             print(f"{year}: already downloaded, skipping")
             continue
 
-        part_file = out_file.with_suffix(".json.part")  # renamed when complete
+        # Write to nvd_cves_<year>.json.part first and rename to the final name
+        # only after the whole year is done. If the run is interrupted or fails,
+        # only the .part file exists, so the next run does not mistake a partial
+        # year for a finished one (it is overwritten and restarted).
+        part_file = out_file.with_suffix(".json.part")
         count = 0
         with part_file.open("w", encoding="utf-8") as f:
             f.write("[")

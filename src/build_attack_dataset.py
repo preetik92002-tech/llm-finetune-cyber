@@ -2,7 +2,7 @@
 
 Input : data/raw/mitre_enterprise_attack.json
 Output: data/processed/attack_{train,val,test}.jsonl
-        data/processed/stats.json   (an "attack" section is added; other keys are kept)
+        data/processed/stats_attack.json   (counts after each step and per split)
 
 Each example:
   user      = text describing how a group/software behaves
@@ -29,7 +29,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 IN_FILE = ROOT / "data" / "raw" / "mitre_enterprise_attack.json"
 OUT_DIR = ROOT / "data" / "processed"
-STATS_FILE = OUT_DIR / "stats.json"
+STATS_FILE = OUT_DIR / "stats_attack.json"  # separate from stats_cve.json
 
 SEED = 42
 SPLIT_FRACTIONS = {"train": 0.8, "val": 0.1, "test": 0.1}
@@ -182,12 +182,8 @@ def main():
             for e in rs:
                 f.write(json.dumps(to_chat(e), ensure_ascii=False) + "\n")
 
-    # ---- Save: merge into stats.json so the CVE stats are kept ----
-    all_stats = {}
-    if STATS_FILE.exists():
-        all_stats = json.loads(STATS_FILE.read_text(encoding="utf-8"))
-    all_stats["attack"] = stats
-    STATS_FILE.write_text(json.dumps(all_stats, indent=2), encoding="utf-8")
+    # ---- Save the stats to their own file ----
+    STATS_FILE.write_text(json.dumps(stats, indent=2), encoding="utf-8")
 
     print(json.dumps(stats, indent=2))
 
