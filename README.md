@@ -62,6 +62,24 @@ python src\build_attack_dataset.py
 
 Optional: add `NVD_API_KEY=...` to a `.env` file for faster downloads.
 
+## Results
+
+**No model has been trained or evaluated yet, so there are no model metrics.** The only results files in `results/` are `ablations.md` and `ablations_data_size.png`, and they were generated before any run: every ablation row says "not run" and the plot is empty. Nothing below is a model result.
+
+What is real today, from `data/processed/stats.json`:
+
+| ATT&CK dataset | Examples | Share |
+|---|---|---|
+| train | 13,139 | 80.0% |
+| validation | 1,642 | 10.0% |
+| test | 1,642 | 10.0% |
+
+- 16,423 "uses" examples were kept from 21,822 relationships in the STIX file. Cleaning and duplicate removal changed no counts.
+- Validation and test each contain 9 techniques that never appear in train.
+- The severity dataset is empty: `cves_clean.jsonl` and `severity_*.jsonl` are 0 bytes because the NVD download is not finished.
+
+When runs exist, the numbers will come from `results/*.json`, `results/ablations.md` and the plots in `results/`. The model card draft is [MODEL_CARD.md](MODEL_CARD.md). It has `TODO` markers where measured values go.
+
 ## Limitations
 
 - **No training or evaluation exists yet.** This repo has no metrics. Stages 05 to 10 are skeletons.

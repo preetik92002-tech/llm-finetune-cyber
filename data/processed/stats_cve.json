@@ -1,0 +1,66 @@
+{
+  "config": {
+    "train_cap_per_class": 2000,
+    "eval_cap": 1000,
+    "near_dup_threshold": 0.85,
+    "num_perm": 128,
+    "shingle_size": 3,
+    "seed": 42,
+    "train_start": "2022-01-01",
+    "train_end": "2024-09-30",
+    "val_start": "2024-10-01",
+    "val_end": "2024-12-31",
+    "test_start": "2025-01-01",
+    "test_end": "2025-12-31"
+  },
+  "steps": {
+    "0_loaded": {
+      "count": 0,
+      "classes": {}
+    },
+    "1_exact_dedup": {
+      "count": 0,
+      "classes": {}
+    },
+    "2_near_dedup": {
+      "count": 0,
+      "classes": {}
+    },
+    "3_split_train": {
+      "count": 0,
+      "classes": {}
+    },
+    "3_split_val": {
+      "count": 0,
+      "classes": {}
+    },
+    "3_split_test": {
+      "count": 0,
+      "classes": {}
+    },
+    "4_no_train_leak_val": {
+      "count": 0,
+      "classes": {}
+    },
+    "4_no_train_leak_test": {
+      "count": 0,
+      "classes": {}
+    },
+    "5_final_train": {
+      "count": 0,
+      "classes": {}
+    },
+    "5_final_val": {
+      "count": 0,
+      "classes": {}
+    },
+    "5_final_test": {
+      "count": 0,
+      "classes": {}
+    }
+  },
+  "leakage_removed": {
+    "val": 0,
+    "test": 0
+  }
+}
