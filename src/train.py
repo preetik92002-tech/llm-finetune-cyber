@@ -31,7 +31,7 @@ def load_config(path):
     return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
 
 
-def load_examples(path, max_samples, seed):
+def load_rows(path, max_samples, seed):
     """Read chat JSONL and turn each example into prompt + completion.
 
     prompt     = the system and user messages
@@ -51,8 +51,36 @@ def load_examples(path, max_samples, seed):
         raise SystemExit(
             f"{path} has no examples. Run stages 02 to 04 first (the severity files are built from the NVD data)."
         )
-    random.Random(seed).shuffle(rows)  # seeded, so the same 50 are picked every time
-    return Dataset.from_list(rows[:max_samples])
+    random.Random(seed).shuffle(rows)  # seeded, so the same examples are picked every time
+    # max_samples: None (or missing) means use everything in the file.
+    return rows if max_samples is None else rows[:max_samples]
+
+
+def build_dataset(cfg):
+    """Severity data, optionally mixed with ATT&CK data.
+
+    Config keys:
+      train_file          severity chat JSONL (required)
+      max_samples         cap on severity examples (null = all)
+      attack_file         ATT&CK chat JSONL (null or missing = severity only)
+      max_attack_samples  cap on ATT&CK examples, so the two tasks stay balanced
+                          (null = all; ATT&CK files can be much larger or smaller
+                          than the severity file)
+    """
+    seed = cfg["seed"]
+    severity = load_rows(ROOT / cfg["train_file"], cfg.get("max_samples"), seed)
+    rows = list(severity)
+    print(f"Severity examples: {len(severity)}")
+
+    if cfg.get("attack_file"):
+        attack = load_rows(ROOT / cfg["attack_file"], cfg.get("max_attack_samples"), seed)
+        print(f"ATT&CK examples:   {len(attack)}")
+        rows += attack
+        # Mix the two tasks so every batch can contain both.
+        random.Random(seed).shuffle(rows)
+
+    print(f"Total training examples: {len(rows)}")
+    return Dataset.from_list(rows)
 
 
 def main():
@@ -68,11 +96,16 @@ def main():
     compute_dtype = torch.bfloat16 if use_bf16 else torch.float16
 
     output_dir = ROOT / cfg["output_dir"]
-    train_file = ROOT / cfg["train_file"]
+
+    # ---- Hub push needs a token; fail now, not after hours of training ----
+    push_to_hub = bool(cfg.get("push_to_hub"))
+    if push_to_hub and not (os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_HUB_TOKEN")):
+        raise SystemExit("push_to_hub is true but HF_TOKEN is not set.")
+    if push_to_hub and not cfg.get("hub_model_id"):
+        raise SystemExit("push_to_hub is true but hub_model_id is missing (for example 'your-name/cyber-slm-qlora').")
 
     # ---- Data ----
-    dataset = load_examples(train_file, cfg["max_samples"], cfg["seed"])
-    print(f"Training examples: {len(dataset)}")
+    dataset = build_dataset(cfg)
 
     # ---- Tokenizer ----
     tokenizer = AutoTokenizer.from_pretrained(cfg["model_name"])
@@ -115,7 +148,10 @@ def main():
     # ---- Training arguments ----
     args = SFTConfig(
         output_dir=str(output_dir),  # where checkpoints/logs go
-        max_steps=cfg["max_steps"],  # total optimizer steps; overrides number of epochs
+        # Length of training: either a fixed number of steps (smoke test) or full
+        # passes over the data. max_steps = -1 means "use epochs instead".
+        max_steps=cfg.get("max_steps") or -1,
+        num_train_epochs=cfg.get("num_train_epochs", 1),  # passes over the data (ignored if max_steps is set)
         per_device_train_batch_size=cfg["per_device_train_batch_size"],  # examples per forward pass
         gradient_accumulation_steps=cfg["gradient_accumulation_steps"],  # add up gradients over this many passes: effective batch = batch x this
         learning_rate=cfg["learning_rate"],  # step size of weight updates
@@ -130,7 +166,17 @@ def main():
         bf16=use_bf16,  # 16-bit format for newer GPUs
         fp16=not use_bf16,  # 16-bit format for older GPUs such as the Colab T4
         logging_steps=1,  # print the loss every step (the run is short)
-        save_strategy="no",  # no mid-run checkpoints; we save the adapter at the end
+        # Checkpoints: every save_steps steps if set, otherwise none (the adapter
+        # is still saved at the end).
+        save_strategy="steps" if cfg.get("save_steps") else "no",
+        save_steps=cfg.get("save_steps") or 500,  # only used when save_strategy is "steps"
+        save_total_limit=cfg.get("save_total_limit"),  # keep only the newest N checkpoints locally (null = all)
+        # Hub upload: "every_save" pushes each checkpoint as it is saved, so a
+        # crashed or timed-out Colab session loses little. Needs HF_TOKEN.
+        push_to_hub=push_to_hub,
+        hub_model_id=cfg.get("hub_model_id"),  # e.g. "your-name/cyber-slm-qlora"
+        hub_strategy=cfg.get("hub_strategy", "every_save"),
+        hub_private_repo=cfg.get("hub_private_repo", True),  # keep the repo private unless the config says otherwise
         seed=cfg["seed"],  # fixes weight init and shuffling
         data_seed=cfg["seed"],  # fixes the data order
         report_to="wandb" if use_wandb else "none",  # log to W&B only with a key
@@ -150,6 +196,9 @@ def main():
     trainer.save_model(str(output_dir))
     tokenizer.save_pretrained(str(output_dir))
     print(f"Adapter saved to {output_dir}")
+    if push_to_hub:
+        trainer.push_to_hub()  # final adapter and tokenizer
+        print(f"Pushed to the Hub: {cfg['hub_model_id']}")
 
 
 if __name__ == "__main__":

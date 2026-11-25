@@ -1,0 +1,42 @@
+# Main QLoRA run: severity + ATT&CK, 2 epochs.
+# Run: python src/train.py --config configs/qlora_main.yaml
+# Before a real run, do the smoke test (configs/smoke_test.yaml) first.
+
+model_name: Qwen/Qwen2.5-1.5B-Instruct
+output_dir: outputs/qlora_main                    # local adapter and checkpoints (git-ignored)
+
+# ---- Data ----
+train_file: data/processed/severity_train.jsonl   # severity task
+max_samples: null                                 # null = use all severity examples
+attack_file: data/processed/attack_train.jsonl    # ATT&CK task; set to null to train on severity only
+# Cap on ATT&CK examples so one task does not drown the other.
+# 4000 is a starting guess: compare it with the severity train size in
+# data/processed/stats_cve.json and set it near that size for a 50/50 mix.
+max_attack_samples: 4000                          # null = use all ATT&CK examples
+
+# ---- Training length and size ----
+num_train_epochs: 2
+max_steps: null                                   # null = use epochs; set a number to stop early
+max_length: 768                                   # tokens per example; longer ones are cut
+per_device_train_batch_size: 4                    # examples per forward pass; lower it on out-of-memory errors
+gradient_accumulation_steps: 4                    # 4 x 4 = 16 examples per optimizer step
+learning_rate: 0.0002
+warmup_steps: 30
+seed: 42
+
+# ---- LoRA ----
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+
+# ---- Checkpoints and Hugging Face Hub ----
+save_steps: 100                                   # save a checkpoint every N steps (null = none)
+save_total_limit: 3                               # keep the newest 3 checkpoints locally
+push_to_hub: true                                 # needs the HF_TOKEN environment variable
+hub_model_id: your-hf-username/cyber-slm-qlora    # CHANGE THIS to your Hub repo
+hub_strategy: every_save                          # push every checkpoint as it is saved
+hub_private_repo: true
+
+wandb_project: cyber-slm                          # used only if WANDB_API_KEY is set
