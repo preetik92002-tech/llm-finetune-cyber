@@ -93,7 +93,7 @@ Fill these after you run it. Do not guess.
 | A `.json.part` file is left over | The last run stopped early. Run again. The year restarts and replaces the `.part` file. |
 | Stage 03 drops almost every record | Your raw files are from an early version of `collect.py` that saved only a short summary. Delete `data/raw/nvd_cves_*.json` and download again. |
 | `HTTP 404` for the MITRE file | The URL changed. It is not retried on purpose. Check `MITRE_URL` in `collect.py`. |
-| `ModuleNotFoundError: dotenv` or `requests` | Run `pip install -r requirements.txt`. |
+| `ModuleNotFoundError: dotenv` or `requests` | Run `pip install -r requirements-data.txt`. |
 
 ## Self-check questions
 

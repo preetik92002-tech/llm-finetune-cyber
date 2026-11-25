@@ -141,7 +141,7 @@ Your current `stats.json` is from before the stats files were split. The next ru
 
 | Error | Fix |
 |---|---|
-| `ModuleNotFoundError: No module named 'datasketch'` | `pip install -r requirements.txt` |
+| `ModuleNotFoundError: No module named 'datasketch'` | `pip install -r requirements-data.txt` |
 | `FileNotFoundError` for `cves_clean.jsonl` | Run stage 03 first. |
 | Val or test has 0 records | Your data has no CVEs in those dates, or the filters removed them. Check `stats_cve.json`. |
 | ATT&CK split is far from 80/10/10 | A few groups have many examples. Check the per-split counts in `stats_attack.json`. |

@@ -12,7 +12,7 @@ After this, every later stage can run with one command.
 ## Concepts
 
 - A [virtual environment](../glossary.md#virtual-environment) keeps this project's packages separate from other projects.
-- `requirements.txt` lists the packages to install. Versions are not pinned yet.
+- There are two requirements files. `requirements-data.txt` is for the laptop (data stages 02 to 04). `requirements-train.txt` is for Google Colab (training and evaluation). Versions are not pinned yet.
 - An [API key](../glossary.md#api-key) is optional. It makes the NVD download much faster because the [rate limit](../glossary.md#rate-limit) is higher. It goes in a `.env` file ([environment variable](../glossary.md#environment-variable-env)).
 - `.gitignore` keeps big or secret files out of git: raw data, model weights and `.env`.
 
@@ -21,7 +21,7 @@ After this, every later stage can run with one command.
 ```mermaid
 flowchart LR
     A["Open repo folder"] --> B["Create virtual environment"]
-    B --> C["pip install -r requirements.txt"]
+    B --> C["pip install -r requirements-data.txt"]
     C --> D{"Have an NVD API key?"}
     D -- yes --> E["Put key in .env"]
     D -- no --> F["Continue (slow downloads)"]
@@ -35,7 +35,8 @@ There is no Python code in this stage. These files set up the project:
 
 | File | Job |
 |---|---|
-| [requirements.txt](../../requirements.txt) | Packages: `requests` (web calls), `python-dotenv` (reads `.env`), `datasketch` (MinHash and LSH, used in stage 04). |
+| [requirements-data.txt](../../requirements-data.txt) | Laptop packages: `requests` (web calls), `python-dotenv` (reads `.env`), `datasketch` (MinHash and LSH, used in stage 04), `pyyaml` (reads config files). |
+| [requirements-train.txt](../../requirements-train.txt) | Colab packages for training and evaluation: `transformers`, `trl`, `peft`, `bitsandbytes`, `datasets`, `accelerate`, `wandb`, `matplotlib`, `scikit-learn`, `pyyaml`. No `torch`, because Colab already has it. |
 | [.gitignore](../../.gitignore) | Ignores `data/raw/*`, model weight files, `.env` and Python caches. |
 | [configs/dataset.json](../../configs/dataset.json) | Settings for the dataset builder (caps, dedup threshold, split dates, seed). Used in stage 04. |
 
@@ -57,8 +58,10 @@ Folders:
 cd C:\Users\Preeti\Desktop\cyber-slm
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-data.txt
 ```
+
+On Google Colab (later stages), the notebook runs `pip install -r requirements-train.txt` for you.
 
 Optional: create a file named `.env` in the repo root with this line:
 
@@ -78,7 +81,7 @@ You can request a key from the [NVD site](https://nvd.nist.gov/developers/reques
 | Error | Fix |
 |---|---|
 | `.venv\Scripts\activate` is blocked by PowerShell | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, then activate again. |
-| `ModuleNotFoundError: No module named 'datasketch'` | The environment is not active, or install was skipped. Activate it and run `pip install -r requirements.txt`. |
+| `ModuleNotFoundError: No module named 'datasketch'` | The environment is not active, or install was skipped. Activate it and run `pip install -r requirements-data.txt`. |
 | `python` is not found | Install Python 3 and tick "Add to PATH", or use `py` instead of `python`. |
 | The key in `.env` seems ignored | The file must be in the repo root and the line must be exactly `NVD_API_KEY=...` with no quotes or spaces. |
 

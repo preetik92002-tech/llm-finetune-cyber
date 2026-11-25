@@ -1,0 +1,14 @@
+# Training and evaluation (stages 05 to 09). Install on Google Colab:
+#   pip install -r requirements-train.txt
+# torch is not listed on purpose: Colab already has it.
+# Versions are not pinned yet. Pin them after a successful run (pip freeze on Colab).
+transformers
+trl
+peft
+bitsandbytes
+datasets
+accelerate
+wandb
+matplotlib
+scikit-learn
+pyyaml

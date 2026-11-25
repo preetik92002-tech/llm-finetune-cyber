@@ -53,7 +53,7 @@ Also: [glossary](docs/glossary.md), [interview Q&A](docs/interview-qa.md) (empty
 ```
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-data.txt
 python src\collect.py
 python src\clean_cves.py
 python src\build_cve_dataset.py
@@ -93,4 +93,4 @@ When runs exist, the numbers will come from `results/*.json`, `results/ablations
 - **ATT&CK data covers the Enterprise matrix only.** Each example has one technique as the answer, and the text comes from MITRE's own "uses" descriptions, which are short and uneven across groups.
 - **The ATT&CK split by group may not be exactly 80/10/10** when a few groups have many examples.
 - **Built for an 8 GB RAM laptop.** The scripts read data in pieces to save memory.
-- **Requirements are not pinned.** Package versions may change behaviour later.
+- **Requirements are not pinned.** Package versions may change behaviour later. The laptop uses `requirements-data.txt` (data stages). Google Colab uses `requirements-train.txt` (training and evaluation), which leaves out `torch` because Colab already has it.

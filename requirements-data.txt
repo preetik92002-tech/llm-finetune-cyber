@@ -1,0 +1,7 @@
+# Data pipeline (stages 02 to 04). Install on the laptop:
+#   pip install -r requirements-data.txt
+# Versions are not pinned yet.
+requests
+python-dotenv
+datasketch
+pyyaml
