@@ -66,7 +66,8 @@ Output files in `data/processed/`:
 
 | File | Content |
 |---|---|
-| `severity_train.jsonl`, `severity_val.jsonl`, `severity_test.jsonl` | Severity examples, messages only |
+| `severity_train.jsonl`, `severity_val.jsonl`, `severity_test.jsonl` | Severity examples, messages only. Test keeps the natural class mix (capped by `eval_cap`). |
+| `severity_test_balanced.jsonl` | Up to `balanced_test_per_class` (150) test examples per severity, or all of a class if it has fewer. Same duplicate and leakage rules as the test file. |
 | `attack_train.jsonl`, `attack_val.jsonl`, `attack_test.jsonl` | ATT&CK examples, messages only |
 | `stats_cve.json`, `stats_attack.json` | Counts after every step, class and split sizes |
 

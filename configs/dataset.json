@@ -1,6 +1,7 @@
 {
   "train_cap_per_class": 2000,
   "eval_cap": 1000,
+  "balanced_test_per_class": 150,
   "near_dup_threshold": 0.85,
   "num_perm": 128,
   "shingle_size": 3,

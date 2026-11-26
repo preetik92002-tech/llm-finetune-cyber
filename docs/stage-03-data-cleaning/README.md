@@ -48,7 +48,8 @@ Filter order (the count after each step is printed):
 
 1. not rejected
 2. has a CVSS v3 severity
-3. description at least 30 characters (`MIN_DESC_CHARS`)
+3. severity is not `NONE` (score 0.0), so only LOW, MEDIUM, HIGH and CRITICAL remain
+4. description at least 30 characters (`MIN_DESC_CHARS`)
 
 Each output line has: `id`, `published`, `description`, `cvss_severity`, `cvss_score`, `cvss_source`, `cvss_source_id`, `cwe_ids`.
 
@@ -71,6 +72,7 @@ Current state: `data/processed/cves_clean.jsonl` is 0 bytes, because `data/raw/`
 | Read from raw files | _fill after run_ |
 | After removing rejected | _fill after run_ |
 | After requiring CVSS v3 severity | _fill after run_ |
+| After removing severity NONE | _fill after run_ |
 | After removing short descriptions | _fill after run_ |
 
 | Severity | Count | Share |

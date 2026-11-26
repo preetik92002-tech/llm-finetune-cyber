@@ -10,7 +10,8 @@ Each output record:
 Filters, in order (the count left after each one is printed):
   1. drop rejected CVEs
   2. drop CVEs with no CVSS v3.x severity
-  3. drop descriptions that are too short (after HTML is stripped)
+  3. drop CVEs whose severity is NONE (only LOW, MEDIUM, HIGH, CRITICAL remain)
+  4. drop descriptions that are too short (after HTML is stripped)
 
 Memory: one year is loaded at a time, and records are written to disk right away.
 
@@ -31,6 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = ROOT / "data" / "raw"
 OUT_FILE = ROOT / "data" / "processed" / "cves_clean.jsonl"
 
+VALID_SEVERITIES = ("CRITICAL", "HIGH", "MEDIUM", "LOW")  # "NONE" (score 0.0) is dropped
 NVD_SOURCE = "nvd@nist.gov"  # NVD's own analysts; this is the "primary" source
 CVSS_V3_KEYS = ("cvssMetricV31", "cvssMetricV30")  # newest first
 TAG_RE = re.compile(r"<[^>]+>")
@@ -128,9 +130,15 @@ def main():
                     continue
                 counts["2 has CVSS v3 severity"] += 1
 
+                # CVSS v3 gives "NONE" to a score of 0.0. It is not a class we
+                # train on, so only LOW, MEDIUM, HIGH and CRITICAL are kept.
+                if cvss[0] not in VALID_SEVERITIES:
+                    continue
+                counts["3 severity is not NONE"] += 1
+
                 if len(description) < MIN_DESC_CHARS:
                     continue
-                counts["3 description long enough"] += 1
+                counts["4 description long enough"] += 1
 
                 severity, score, source, source_id = cvss
                 record = {
@@ -156,7 +164,7 @@ def main():
 
     print("\nSeverity distribution:")
     total = sum(severities.values()) or 1
-    for sev in ("CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE"):
+    for sev in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
         if sev in severities:
             print(f"  {sev:<10}{severities[sev]:>8}  {severities[sev] / total:6.1%}")
 
