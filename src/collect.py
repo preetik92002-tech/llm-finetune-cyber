@@ -11,6 +11,7 @@ Optional: set NVD_API_KEY in .env (or the environment) for a higher rate limit.
 
 import json
 import os
+import re
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -38,7 +39,30 @@ BACKOFF_BASE = 10  # first wait in seconds
 BACKOFF_MAX = 300  # never wait longer than 5 minutes
 TIMEOUT = 60  # seconds per HTTP request
 
-API_KEY = os.getenv("NVD_API_KEY")
+def clean_api_key(raw):
+    """Return a usable NVD key, or None if the value is empty or a placeholder.
+
+    THE BUG THIS FIXES: the NVD API answers HTTP 404 when a request carries an
+    `apiKey` header whose value is not a valid key. A `.env` line such as
+    `NVD_API_KEY=your-key-here` (the placeholder from the setup docs) or
+    `NVD_API_KEY=` with stray quotes or spaces looks "set" to the script, so it
+    sent that junk as the header. NVD rejected it with 404, while `curl` with
+    the same URL and no header returned 200. A request with no key is accepted.
+
+    Real NVD keys are UUIDs (for example 12345678-90ab-cdef-1234-567890abcdef),
+    so anything else is treated as "no key" and the header is never sent.
+    """
+    if raw is None:
+        return None
+    value = raw.strip().strip("\"'").strip()  # drop spaces and quotes pasted into .env
+    if re.fullmatch(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", value):
+        return value
+    if raw.strip():  # something was set but it is not a key: say so, never print it
+        print("NVD_API_KEY is set but is not a valid key (empty or a placeholder). Ignoring it and sending no apiKey header.")
+    return None
+
+
+API_KEY = clean_api_key(os.getenv("NVD_API_KEY"))  # None means: send no apiKey header
 # NVD limits: 5 requests / 30 s without a key, 50 / 30 s with a key.
 # Sleep a little more than the minimum gap between calls to stay under it.
 MIN_GAP = 0.7 if API_KEY else 6.5
@@ -68,6 +92,13 @@ def get_with_retry(url, params=None, headers=None):
             print(f"  network error ({exc}); retry {attempt}/{MAX_RETRIES}")
             time.sleep(backoff_delay(attempt))
             continue
+
+        # On any 404, show what was really sent so the cause is visible.
+        # Header NAMES only: values (such as the API key) are never printed.
+        if resp.status_code == 404:
+            print(f"  HTTP 404 for URL: {resp.url}")
+            print(f"  Headers sent (names only): {', '.join(resp.request.headers.keys())}")
+            print(f"  Response body: {resp.text[:1000]!r}")
 
         # Retryable statuses:
         #   403/429 = rate limited (NVD answers 403 when over the limit)
