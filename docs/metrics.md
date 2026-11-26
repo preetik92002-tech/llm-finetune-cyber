@@ -149,6 +149,16 @@ Planned in `configs/qlora_05b.yaml` (free Colab T4). The data selection and leng
 | ATT&CK unparseable outputs | Pending | Pending | Pending |
 | Fake CVE ids answered with a severity | Pending | Pending | Pending |
 
+### Baselines without a language model
+
+Source (when run): `results/baseline_tfidf.json` from `src/baseline_tfidf.py`, and `severity_majority_baseline` in each evaluation JSON. The TF-IDF script has not been run for the record, because the test files need the `meta` field first (rebuild with `src/build_cve_dataset.py`).
+
+| Baseline | Test file | Accuracy | Macro-F1 | NVD only (n) | CNA only (n) |
+|---|---|---|---|---|---|
+| TF-IDF + logistic regression | natural test | Pending | Pending | Pending | Pending |
+| TF-IDF + logistic regression | balanced test | Pending | Pending | Pending | Pending |
+| Majority class (the train labels CRITICAL, HIGH and MEDIUM tie at 2,000 each) | natural and balanced test | Pending | Pending | Pending | Pending |
+
 ## Stage 08: Ablations
 
 Planned in `configs/ablations.yaml` (5 runs, one change at a time).

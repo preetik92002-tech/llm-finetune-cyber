@@ -108,30 +108,47 @@ def planned_steps(n_examples, batch_size, grad_accum, epochs):
     return math.ceil(epochs * steps_per_epoch), steps_per_epoch
 
 
+def format_duration(seconds):
+    """Seconds -> "45 s", "37 min" or "1 h 02 min" (rounded to the nearest minute)."""
+    minutes = round(seconds / 60)
+    if minutes < 1:
+        return f"{round(seconds)} s"
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours} h {minutes:02d} min" if hours else f"{minutes} min"
+
+
 class TimeEstimate(TrainerCallback):
     """After the first `after_steps` steps, print an estimate of the total time.
 
-    The estimate is: seconds per step x steps of the FULL run (even if --max_steps
-    stops the run early, so a 10-step test still tells me the time of the real run).
-    The first steps include start-up work, so the estimate is a little high.
-    Time spent saving checkpoints is not included.
+    The number of steps of THIS run is read from the trainer itself (state.max_steps).
+    It is max_steps when that is set (in the config or with --max_steps), and
+    otherwise the steps of the epochs. An earlier version always used the epoch
+    count, so a 20-step run showed a wrong total.
+    If a test run was started with --max_steps while the config trains by epochs,
+    `epoch_steps` is also given, and the time of the full run is printed as well.
+    The first steps include start-up work, so the estimate is a little high, and
+    time spent saving checkpoints is not included.
     """
 
-    def __init__(self, full_steps, after_steps=10):
-        self.full_steps, self.after_steps = full_steps, after_steps
-        self.t0 = self.start_step = None
+    def __init__(self, after_steps=10, epoch_steps=None):
+        self.after_steps, self.epoch_steps = after_steps, epoch_steps
+        self.t0 = self.start_step = self.total_steps = None
 
     def on_train_begin(self, args, state, control, **kwargs):
-        self.t0, self.start_step = time.time(), state.global_step  # global_step is > 0 when resuming
+        # global_step is above 0 when resuming from a checkpoint.
+        self.t0, self.start_step, self.total_steps = time.time(), state.global_step, state.max_steps
 
     def on_step_end(self, args, state, control, **kwargs):
         if state.global_step - self.start_step == self.after_steps:
             per_step = (time.time() - self.t0) / self.after_steps
-            total, left = per_step * self.full_steps, per_step * max(self.full_steps - state.global_step, 0)
-            fmt = lambda s: f"{int(s // 3600)} h {int(s % 3600 // 60)} min"
+            left = per_step * max(self.total_steps - state.global_step, 0)
             print(f"\n[time estimate] {per_step:.1f} s/step over the first {self.after_steps} steps. "
-                  f"Full run = {self.full_steps} steps, about {fmt(total)} in total, "
-                  f"about {fmt(left)} still to go.\n")
+                  f"This run has {self.total_steps} steps: about {format_duration(per_step * self.total_steps)} "
+                  f"in total, about {format_duration(left)} still to go.")
+            if self.epoch_steps and self.epoch_steps != self.total_steps:
+                print(f"  The full run by epochs has {self.epoch_steps} steps: "
+                      f"about {format_duration(per_step * self.epoch_steps)}.")
+            print()
 
 
 def build_dataset(cfg):
@@ -204,6 +221,7 @@ def main():
     parser.add_argument("--resume", action="store_true", help="continue from the newest checkpoint in output_dir")
     cli = parser.parse_args()
     cfg = load_config(cli.config)
+    config_max_steps = cfg.get("max_steps")  # remember what the config says, before --max_steps overrides it
 
     if cli.output_dir:
         cfg["output_dir"] = cli.output_dir  # an absolute path (such as on Drive) is used as it is
@@ -251,11 +269,13 @@ def main():
 
     # ---- How many examples are too long, and how long the full run will be ----
     report_truncation(dataset, tokenizer, cfg["max_length"])
-    full_steps, steps_per_epoch = planned_steps(
+    epoch_steps, steps_per_epoch = planned_steps(
         len(dataset), cfg["per_device_train_batch_size"], cfg["gradient_accumulation_steps"],
         cfg.get("num_train_epochs", 1))
+    run_steps = cfg.get("max_steps") or epoch_steps  # max_steps wins when it is set
     print(f"Plan: {len(dataset)} examples, {steps_per_epoch} steps per epoch, "
-          f"{full_steps} steps in the full run (epochs: {cfg.get('num_train_epochs', 1)}).")
+          f"{epoch_steps} steps for {cfg.get('num_train_epochs', 1)} epochs. "
+          f"This run stops after {run_steps} steps ({'max_steps' if cfg.get('max_steps') else 'epochs'}).")
 
     # ---- Model in 4-bit (the "Q" in QLoRA) ----
     bnb_config = BitsAndBytesConfig(
@@ -374,7 +394,10 @@ def main():
         assert "bfloat16" not in trainable, f"Trainable bfloat16 parameters remain: {dict(trainable)}"
         assert "float16" not in trainable, f"Trainable float16 parameters remain: {dict(trainable)}"
 
-    trainer.add_callback(TimeEstimate(full_steps, after_steps=10))  # prints the time estimate after 10 steps
+    # Prints the time estimate after 10 steps. For a --max_steps test of a config that
+    # trains by epochs, it also prints the time of the full run.
+    test_of_epoch_config = bool(cli.max_steps) and not config_max_steps
+    trainer.add_callback(TimeEstimate(after_steps=10, epoch_steps=epoch_steps if test_of_epoch_config else None))
 
     # ---- Resume ----
     # --resume continues from the newest "checkpoint-N" folder in output_dir. A

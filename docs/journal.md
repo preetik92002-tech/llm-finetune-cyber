@@ -255,3 +255,18 @@ Commit: `f004ff8` (14:45).
 **What I checked on my laptop (no GPU).** The data selection gives 4,000 severity examples (1,000 per class) and 2,000 ATT&CK examples, 6,000 in total, which is 375 steps per epoch and 750 steps for 2 epochs. With the Qwen tokenizer, 50 of the 6,000 examples (0.8%) are longer than 512 tokens. The time estimate and the resume step count were tried with fake timings only. The real time per step is Pending until the 10-step test on Colab.
 
 **What I learned.** A truncated example loses the end, which is the answer, so I want to know how many there are before I train. A test run must not share a folder with the real run.
+
+---
+
+## Session 14: A correct time estimate, and two baselines
+
+**What I changed.**
+- **Time estimate ([E19](errors-and-fixes.md#e19)).** The estimate showed 6 steps for a 20-step run, because it ignored `max_steps`. It now reads the run's real total from the trainer. A `--max_steps` test of an epoch-based config also prints the full run's time. Durations print as seconds, minutes or hours and minutes.
+- **`evaluate.py`.** If more than half of a task's outputs cannot be parsed, it prints 3 raw outputs, so I can see why. It also adds a majority-class baseline to the severity results: always predict the most frequent label of the train set.
+- **`src/baseline_tfidf.py`.** A TF-IDF and logistic regression classifier on `severity_train.jsonl`, evaluated on the natural and the balanced test file with accuracy, macro-F1 and the NVD/CNA breakdown. It runs on the laptop CPU. I added `scikit-learn` to `requirements-data.txt`.
+
+**What I noticed.** The train file is class-balanced on purpose (2,000 each of CRITICAL, HIGH and MEDIUM, 1,343 LOW), so three labels tie for "most frequent". The majority baseline picks one of them by name (CRITICAL) and records the tie. It says little about the natural test distribution. The TF-IDF baseline is the more useful comparison.
+
+**What I checked.** The code compiles. The time estimate and the baseline functions were tried with fake timings and small samples. A test run of the TF-IDF script on the current test files worked, but those files have no `meta` field yet, so the NVD and CNA parts were empty. I did not save that result. I will run `python src\baseline_tfidf.py` after rebuilding the severity files.
+
+**What I learned.** A baseline that costs seconds on a laptop belongs in the project before any GPU run.

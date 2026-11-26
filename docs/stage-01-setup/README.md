@@ -33,7 +33,7 @@ No Python code runs in this stage. These files set the project up:
 
 | File | Job |
 |---|---|
-| [requirements-data.txt](../../requirements-data.txt) | Laptop packages: `requests`, `python-dotenv`, `datasketch`, `pyyaml` |
+| [requirements-data.txt](../../requirements-data.txt) | Laptop packages: `requests`, `python-dotenv`, `datasketch`, `pyyaml`, `scikit-learn` (for the TF-IDF baseline) |
 | [requirements-train.txt](../../requirements-train.txt) | Colab packages: `transformers`, `trl`, `peft`, `bitsandbytes`, `datasets`, `accelerate`, `wandb`, `matplotlib`, `scikit-learn`, `pyyaml` |
 | [.gitignore](../../.gitignore) | Keeps raw data, model weights, `.env` and caches out of git |
 | [configs/dataset.json](../../configs/dataset.json) | Settings for the dataset builder (used in stage 04) |

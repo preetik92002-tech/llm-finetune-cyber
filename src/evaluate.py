@@ -193,6 +193,42 @@ def parent_of(technique_id):
 
 
 # ------------------------------------------------------------------ metrics
+def warn_if_mostly_unparseable(task, outputs, parsed, show=3):
+    """If more than half of a task's outputs could not be parsed, print some raw ones.
+
+    A high unparseable rate usually means the output format is not what the parser
+    expects (or the model is not following the prompt). Seeing a few raw outputs
+    shows which one it is.
+    """
+    bad = [o for o, p in zip(outputs, parsed) if p is None]
+    if len(bad) * 2 > len(outputs):
+        print(f"WARNING: {len(bad)} of {len(outputs)} {task} outputs are unparseable. First {min(show, len(bad))} raw outputs:")
+        for o in bad[:show]:
+            print(f"  {o[:300]!r}")
+
+
+def majority_baseline(train_path, golds, sources):
+    """Severity metrics of a model that always predicts the most frequent train label.
+
+    The train file is class-balanced on purpose (capped per class), so several labels
+    can tie for most frequent. A tie is broken by label name and reported under
+    "tied_labels", so nobody mistakes the choice for a real finding.
+    """
+    path = Path(train_path)
+    if not path.exists() or not path.stat().st_size:
+        return {"note": f"{path.name} is missing or empty, so there is no majority baseline"}
+    counts = Counter(r["messages"][-1]["content"].strip().upper() for r in read_jsonl(path))
+    top = max(counts.values())
+    tied = sorted(label for label, c in counts.items() if c == top)
+    label = tied[0]
+    result = {"predicts": label, "train_label_counts": dict(counts), "tied_labels": tied,
+              "metrics": severity_by_source(golds, [label] * len(golds), sources)}
+    all_part = result["metrics"]["all"]
+    print(f"Majority baseline (always '{label}'{', tie: ' + ', '.join(tied) if len(tied) > 1 else ''}): "
+          f"accuracy {all_part['accuracy']:.3f}, macro-F1 {all_part['macro_f1']:.3f}")
+    return result
+
+
 def severity_by_source(golds, preds, sources):
     """The same severity metrics three times: all samples, only NVD labels, only CNA labels.
 
@@ -393,11 +429,15 @@ def main():
                            args.batch_size, args.max_new_tokens)
         golds = [r["gold"].upper() for r in rows]
         preds = [parse_severity(o) for o in outputs]
+        warn_if_mostly_unparseable("severity", outputs, preds)  # shows raw outputs when the parser fails a lot
         sources = [r["source"] for r in rows]  # "nvd", "cna" or None
         # "severity" keeps the all-samples metrics (other scripts read it).
         # "severity_by_source" holds the same metrics for all, nvd and cna.
         result["severity"] = severity_metrics(golds, preds)
         result["severity_by_source"] = severity_by_source(golds, preds, sources)
+        # Majority-class baseline: always answer the most frequent label of the train set.
+        # A model has to beat this to show it learned something.
+        result["severity_majority_baseline"] = majority_baseline(args.severity_train, golds, sources)
         plot_confusion(result["severity"], RESULTS / f"{name}_severity_confusion.png", f"Severity: {name}")
         predictions += [{"task": "severity", "cvss_source": src, "gold": g, "pred": pr, "raw": o}
                         for g, pr, o, src in zip(golds, preds, outputs, sources)]
@@ -411,6 +451,7 @@ def main():
                            args.batch_size, args.max_new_tokens)
         golds = [parse_technique(r["gold"]) for r in rows]  # gold is "T1566.001 Name"; keep the id
         preds = [parse_technique(o) for o in outputs]
+        warn_if_mostly_unparseable("ATT&CK", outputs, preds)
         # Technique ids that appear anywhere in our ATT&CK files count as "real".
         known = {parse_technique(r["messages"][-1]["content"])
                  for f in PROCESSED.glob("attack_*.jsonl") for r in read_jsonl(f)}

@@ -50,7 +50,11 @@ flowchart LR
 - The source is read from a separate `meta` field of each test line (`{"id": ..., "cvss_source": ...}`). The chat `messages` are unchanged, and `train.py` ignores `meta`. The predictions file also stores `cvss_source` per example.
 - `attack_metrics()`: exact-match and parent-technique accuracy, and how many predicted ids do not exist in my data.
 - `hallucination_check()`: asks about made-up CVE ids and counts how often the model gives a severity anyway.
+- `majority_baseline()`: the metrics of a model that always answers the most frequent train label. The train set is class-balanced, so three labels tie, and the result records the tie.
+- `warn_if_mostly_unparseable()`: when more than half of a task's outputs cannot be parsed, it prints 3 raw outputs.
 - Saves `results/<name>.json`, a predictions file and the plots.
+
+[src/baseline_tfidf.py](../../src/baseline_tfidf.py) is a second baseline that needs no GPU: TF-IDF word features and logistic regression, trained on `severity_train.jsonl` and evaluated on the natural and the balanced test file (accuracy, macro-F1 and the NVD/CNA breakdown). Run it on the laptop with `python src\baseline_tfidf.py`. It saves `results/baseline_tfidf.json`.
 
 ## How to run
 
