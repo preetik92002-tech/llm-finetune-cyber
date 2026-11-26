@@ -208,3 +208,17 @@ Commit: `f004ff8` (14:45).
 **What I learned.** Reading the stats file line by line found a problem (the shift) that the totals hid. The filters need their class counts checked, not only their record counts.
 
 **Still open.** Re-run `clean_cves.py` so its stats file is script-written and includes the NONE step. Re-run `build_cve_dataset.py` to add the `meta` field to the severity files. All model results are Pending.
+
+---
+
+## Session 11: First Colab T4 run fails on bf16
+
+**What happened.** The first backward pass on a Colab T4 stopped with "gemm input type BFloat16 and output type float is only supported for CUDA devices with compute capability 8.0 or higher", raised from `trl/kernels/chunked_logprob.py` ([E17](errors-and-fixes.md#e17)).
+
+**How I found the cause.** The message names compute capability 8.0, and a T4 has 7.5. In `train.py` I had chosen bf16 with `torch.cuda.is_bf16_supported()`. That call can answer True on older GPUs because bf16 can be emulated, and the emulated path fails in some kernels.
+
+**What fixed it.** `train.py` now reads the GPU's compute capability: below 8 it uses fp16 everywhere (model dtype, 4-bit compute dtype, trainer flags), otherwise bf16. It prints the choice at the start. It also passes `loss_type="nll"` and uses `dtype` instead of the deprecated `torch_dtype`. `evaluate.py` got the same rule. The two YAML configs had no bf16 setting.
+
+**What I checked.** The code compiles, `SFTConfig` accepts the new arguments, and the rule picks fp16 for 7.5 and bf16 for 8.0 and above. The real T4 run is Pending.
+
+**What I learned.** Ask the hardware what it can do. A "supported" flag in a library can mean "works by emulation".

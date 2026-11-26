@@ -133,14 +133,20 @@ def load_model(args):
         print("WARNING: no CUDA GPU found. Evaluation will be very slow.")
     kwargs = {}
     if use_cuda and not args.no_4bit:
-        dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+        # bf16 only on compute capability 8.0 or higher. is_bf16_supported() can say True
+        # on a T4 (7.5) because bf16 is emulated there, and that path fails in some
+        # kernels. Same rule as src/train.py.
+        major, minor = torch.cuda.get_device_capability()
+        dtype = torch.bfloat16 if major >= 8 else torch.float16
+        print(f"GPU compute capability {major}.{minor}. Precision: {'bf16' if major >= 8 else 'fp16'}")
         kwargs["quantization_config"] = BitsAndBytesConfig(
             load_in_4bit=True, bnb_4bit_quant_type="nf4",
             bnb_4bit_use_double_quant=True, bnb_4bit_compute_dtype=dtype,
         )
+        kwargs["dtype"] = dtype
         kwargs["device_map"] = {"": 0}
     elif use_cuda:
-        kwargs["torch_dtype"] = torch.float16
+        kwargs["dtype"] = torch.float16  # "torch_dtype" is the deprecated name
         kwargs["device_map"] = {"": 0}
     model = AutoModelForCausalLM.from_pretrained(args.model, **kwargs)
 

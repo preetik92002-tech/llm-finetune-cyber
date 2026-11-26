@@ -91,9 +91,19 @@ def main():
     if not torch.cuda.is_available():
         raise SystemExit("No CUDA GPU found. 4-bit QLoRA needs one. Use Google Colab (GPU runtime).")
 
-    # bf16 needs a newer GPU (Ampere or later). Older ones (Colab T4) use fp16.
-    use_bf16 = torch.cuda.is_bf16_supported()
+    # ---- Precision: choose it from the GPU's compute capability ----
+    # bf16 needs hardware support, which starts at compute capability 8.0 (Ampere).
+    # Older GPUs such as the Colab T4 (7.5) must use fp16.
+    # Do NOT use torch.cuda.is_bf16_supported() for this: newer PyTorch versions
+    # return True on older GPUs too, because bf16 can be emulated there. The
+    # emulated path then fails inside some kernels. That caused the error "gemm
+    # input type BFloat16 and output type float is only supported for CUDA devices
+    # with compute capability 8.0 or higher" on a T4.
+    major, minor = torch.cuda.get_device_capability()
+    use_bf16 = major >= 8
     compute_dtype = torch.bfloat16 if use_bf16 else torch.float16
+    print(f"GPU: {torch.cuda.get_device_name()} (compute capability {major}.{minor}). "
+          f"Precision: {'bf16' if use_bf16 else 'fp16'}")
 
     output_dir = ROOT / cfg["output_dir"]
 
@@ -123,7 +133,7 @@ def main():
         cfg["model_name"],
         quantization_config=bnb_config,
         device_map={"": 0},  # put the whole model on GPU 0
-        torch_dtype=compute_dtype,
+        dtype=compute_dtype,  # dtype of the non-quantized weights; "torch_dtype" is the deprecated name
     )
     # Gets a 4-bit model ready for training (casts some layers, enables gradient checkpointing hooks).
     model = prepare_model_for_kbit_training(model)
@@ -163,8 +173,12 @@ def main():
         packing=False,  # one example per sequence (packing would blur the loss mask)
         gradient_checkpointing=True,  # recompute activations to save GPU memory (slower)
         gradient_checkpointing_kwargs={"use_reentrant": False},  # the recommended mode
-        bf16=use_bf16,  # 16-bit format for newer GPUs
-        fp16=not use_bf16,  # 16-bit format for older GPUs such as the Colab T4
+        # Loss: plain negative log-likelihood. Setting it explicitly keeps TRL off its
+        # chunked log-prob kernel (trl/kernels/chunked_logprob.py), which needs bf16
+        # matrix math that a T4 does not have.
+        loss_type="nll",
+        bf16=use_bf16,  # bf16 only on GPUs with compute capability 8 or higher (see above)
+        fp16=not use_bf16,  # fp16 on older GPUs such as the Colab T4
         logging_steps=1,  # print the loss every step (the run is short)
         # Checkpoints: every save_steps steps if set, otherwise none (the adapter
         # is still saved at the end).
