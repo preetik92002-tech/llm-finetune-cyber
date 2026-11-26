@@ -52,9 +52,9 @@ Dataset sizes:
 | Dataset | Train | Validation | Test |
 |---|---|---|---|
 | ATT&CK | 13,139 | 1,642 | 1,642 |
-| Severity | TODO | TODO | TODO |
+| Severity | 7,343 (2,000 each CRITICAL, HIGH, MEDIUM; 1,343 LOW) | 1,000 | 1,000 natural, plus 600 balanced (150 per class) |
 
-The ATT&CK numbers come from `data/processed/stats.json`. Of the techniques in validation and test, 9 each do not appear in train. The severity files were empty at the time of writing (the NVD download was not finished).
+The ATT&CK numbers come from `data/processed/stats.json`. Of the techniques in validation and test, 9 each do not appear in train. The severity numbers come from `data/processed/stats_cve.json`. In the final train set 84.0% of the labels are NVD scores, while the natural test set is 62.1% CNA scores (see Limitations).
 
 ## Training setup
 
@@ -89,12 +89,14 @@ Run with `src/evaluate.py`. Metrics are on the 2025 severity test set and the AT
 | ATT&CK unparseable outputs | TODO | TODO | TODO |
 | Fake CVE ids answered with a severity (hallucination check) | TODO | TODO | TODO |
 
-Ablations (LoRA rank 8, 16, 64; 500, 2000, 5000 training examples): see `results/ablations.md` in the repo. TODO: summarise once runs exist.
+Ablations (LoRA rank 8, 16, 64; 500, 2000, 5000 training examples): TODO: no runs yet. Summarise `results/ablations.md` once it exists.
 
 ## Limitations
 
 - Labels are CVSS scores, which are partly a judgement and can differ between NVD and CNAs. The model learns those labels, not the truth about a flaw.
 - A CVE description does not always contain what the score is based on, so some severity errors cannot be avoided from text alone.
+- The label source shifts between splits: the final train set is 84.0% NVD scores and the natural test set is 62.1% CNA scores. A lower test score may come from this shift and not from the model.
+- The natural validation and test sets hold only 17 and 26 LOW examples, so LOW scores there are noisy. The balanced test set has 150 per class.
 - CVEs without a v3 score were dropped, which may bias the data.
 - The model was trained to always answer with a label. It may give a confident severity or technique for input it cannot know, including made-up ids. See the hallucination row above.
 - ATT&CK covers the Enterprise matrix only. Each example has a single technique as the answer, while real behaviour often matches several.

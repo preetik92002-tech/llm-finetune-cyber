@@ -109,3 +109,18 @@ An ATT&CK entry for one way of attacking, with an id like `T1566` (technique) or
 
 ## Virtual environment
 A private folder of Python packages for one project, so its versions do not clash with other projects. Created with `python -m venv .venv`.
+
+## Class imbalance
+When some labels are much rarer than others. Here LOW is about 2% of the cleaned CVEs. Plain accuracy can look good even if the model never predicts the rare class. See [macro-F1](#macro-f1).
+
+## Confusion matrix
+A table that shows, for each true label, how often the model predicted each label. The diagonal holds the right answers.
+
+## Epoch
+One full pass over the training data. Training for 2 epochs means the model sees every example twice.
+
+## Label source
+Who gave a CVE its CVSS score: the NVD's own analysts (`nvd`) or the CNA, often the vendor (`cna`). This repo prefers the NVD score and stores which one it used.
+
+## Macro-F1
+An average of the F1 score of each class. F1 mixes precision (how many predicted items were right) and recall (how many true items were found). Every class counts the same, so a rare class is not hidden.

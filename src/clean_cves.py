@@ -2,6 +2,7 @@
 
 Input : data/raw/nvd_cves_<year>.json   (full NVD "cve" objects, from collect.py)
 Output: data/processed/cves_clean.jsonl (one JSON record per line)
+        data/processed/stats_clean.json (funnel counts, severity and score-source counts)
 
 Each output record:
   id, published, description, cvss_severity, cvss_score,
@@ -31,6 +32,7 @@ MIN_DESC_CHARS = 30  # shorter descriptions carry too little signal to learn fro
 ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = ROOT / "data" / "raw"
 OUT_FILE = ROOT / "data" / "processed" / "cves_clean.jsonl"
+STATS_FILE = ROOT / "data" / "processed" / "stats_clean.json"  # counts for docs and figures
 
 VALID_SEVERITIES = ("CRITICAL", "HIGH", "MEDIUM", "LOW")  # "NONE" (score 0.0) is dropped
 NVD_SOURCE = "nvd@nist.gov"  # NVD's own analysts; this is the "primary" source
@@ -169,6 +171,23 @@ def main():
             print(f"  {sev:<10}{severities[sev]:>8}  {severities[sev] / total:6.1%}")
 
     print(f"\nCVSS source used: {dict(sources)}")
+
+    # Save the same numbers to a file, so docs and figures (src/make_figures.py)
+    # read them instead of copying them from the console.
+    stats = {
+        "provenance": "written by src/clean_cves.py",
+        "cleaning_funnel": {
+            "read": counts["0 read"],
+            "not_rejected": counts["1 not rejected"],
+            "has_cvss_v3_severity": counts["2 has CVSS v3 severity"],
+            "severity_not_none": counts["3 severity is not NONE"],
+            "description_long_enough": counts["4 description long enough"],
+        },
+        "severity_distribution": dict(severities),
+        "cvss_source": dict(sources),
+    }
+    STATS_FILE.write_text(json.dumps(stats, indent=2), encoding="utf-8")
+    print(f"Stats -> {STATS_FILE}")
     print(f"Saved -> {OUT_FILE}")
 
 

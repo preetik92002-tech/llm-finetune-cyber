@@ -156,8 +156,14 @@ def collect_nvd():
     for year in YEARS:
         out_file = RAW_DIR / f"nvd_cves_{year}.json"
         if out_file.exists():  # resume support: skip finished years
-            print(f"{year}: already downloaded, skipping")
-            continue
+            try:
+                n = validate_year_file(out_file)  # but only if the file is readable
+                print(f"{year}: already downloaded ({n} CVEs, checked), skipping")
+                continue
+            except (ValueError, OSError) as exc:
+                bad = out_file.with_suffix(".json.corrupt")
+                print(f"{year}: existing file is not valid ({exc}). Moving it to {bad.name} and downloading again.")
+                out_file.replace(bad)  # keep it for inspection; never delete data silently
 
         # Write to nvd_cves_<year>.json.part first and rename to the final name
         # only after the whole year is done. If the run is interrupted or fails,
@@ -188,8 +194,46 @@ def collect_nvd():
                         break
             f.write("\n]")
 
+        # Check the finished .part file BEFORE it gets its final name. A file
+        # that fails the check keeps the .part name, so it is never skipped later.
+        checked = validate_year_file(part_file)
+        if checked != count:
+            raise RuntimeError(f"{part_file.name}: wrote {count} CVEs but found {checked} when checking it")
         part_file.replace(out_file)
-        print(f"{year}: saved {count} CVEs -> {out_file}")
+        print(f"{year}: saved {count} CVEs (checked) -> {out_file}")
+
+
+def validate_year_file(path):
+    """Check a yearly NVD file without loading it all: return its number of CVEs.
+
+    Why: one yearly file once turned out to be unreadable (JSONDecodeError deep
+    inside the file). It happened while two collector runs were active, which is
+    my guess and not proven. Checking each file right after the download, and
+    again before it is skipped, finds such a file early instead of in stage 03.
+
+    The file layout is written by collect_nvd(): a line "[", one JSON record per
+    line (all but the last end with a comma), then a line "]". So each line can
+    be parsed on its own and memory stays low.
+    """
+    count = 0
+    with path.open(encoding="utf-8") as f:
+        first = f.readline().strip()
+        if first != "[":
+            raise ValueError(f"{path.name}: does not start with '['")
+        last = ""
+        for line in f:
+            line = line.strip()
+            if line == "]":
+                last = line
+                continue
+            if last:  # something after the closing bracket
+                raise ValueError(f"{path.name}: data after the closing ']'")
+            json.loads(line.rstrip(","))  # raises if this record is broken
+            count += 1
+        if last != "]":
+            raise ValueError(f"{path.name}: missing the closing ']' (the download was cut short)")
+    return count
+
 
 def collect_mitre():
     """Download the full ATT&CK Enterprise STIX bundle (one JSON file)."""

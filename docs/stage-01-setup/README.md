@@ -2,92 +2,86 @@
 
 **Status:** Done
 
-Previous: none | Home: [README](../../README.md) | Next: [Stage 02: Data collection](../stage-02-data-collection/README.md)
-
 ## Goal
 
-Get the folders, Python packages and optional NVD key ready.
-After this, every later stage can run with one command.
+I set up the folders, a Python environment and the packages, so every later stage runs with one command.
+I also learned to keep secrets out of the code.
 
 ## Concepts
 
-- A [virtual environment](../glossary.md#virtual-environment) keeps this project's packages separate from other projects.
-- There are two requirements files. `requirements-data.txt` is for the laptop (data stages 02 to 04). `requirements-train.txt` is for Google Colab (training and evaluation). Versions are not pinned yet.
-- An [API key](../glossary.md#api-key) is optional. It makes the NVD download much faster because the [rate limit](../glossary.md#rate-limit) is higher. It goes in a `.env` file ([environment variable](../glossary.md#environment-variable-env)).
-- `.gitignore` keeps big or secret files out of git: raw data, model weights and `.env`.
+- A [virtual environment](../glossary.md#virtual-environment) is a private box of Python packages for one project.
+- There are two requirements files because there are two places to run. `requirements-data.txt` is for my laptop (data stages 02 to 04). `requirements-train.txt` is for Google Colab (training and evaluation). It has no `torch`, because Colab already has it. Versions are not pinned yet.
+- An [API key](../glossary.md#api-key) is optional. With an NVD key the download is much faster, because the [rate limit](../glossary.md#rate-limit) is higher. The key lives in a `.env` file ([environment variable](../glossary.md#environment-variable-env)). `.env` is in `.gitignore`.
+- Secrets never go into code, docs, screenshots or the terminal output. On Colab I use Colab Secrets. If a secret is ever exposed, I revoke it ([E13](../errors-and-fixes.md#e13)).
 
 ## Flowchart
 
 ```mermaid
 flowchart LR
-    A["Open repo folder"] --> B["Create virtual environment"]
+    A["Open the project folder"] --> B["Create a virtual environment"]
     B --> C["pip install -r requirements-data.txt"]
     C --> D{"Have an NVD API key?"}
-    D -- yes --> E["Put key in .env"]
-    D -- no --> F["Continue (slow downloads)"]
+    D -- yes --> E["Put it in .env"]
+    D -- no --> F["Continue without a key (slower)"]
     E --> G["Ready for stage 02"]
     F --> G
 ```
 
 ## What the code does
 
-There is no Python code in this stage. These files set up the project:
+No Python code runs in this stage. These files set the project up:
 
 | File | Job |
 |---|---|
-| [requirements-data.txt](../../requirements-data.txt) | Laptop packages: `requests` (web calls), `python-dotenv` (reads `.env`), `datasketch` (MinHash and LSH, used in stage 04), `pyyaml` (reads config files). |
-| [requirements-train.txt](../../requirements-train.txt) | Colab packages for training and evaluation: `transformers`, `trl`, `peft`, `bitsandbytes`, `datasets`, `accelerate`, `wandb`, `matplotlib`, `scikit-learn`, `pyyaml`. No `torch`, because Colab already has it. |
-| [.gitignore](../../.gitignore) | Ignores `data/raw/*`, model weight files, `.env` and Python caches. |
-| [configs/dataset.json](../../configs/dataset.json) | Settings for the dataset builder (caps, dedup threshold, split dates, seed). Used in stage 04. |
-
-Folders:
+| [requirements-data.txt](../../requirements-data.txt) | Laptop packages: `requests`, `python-dotenv`, `datasketch`, `pyyaml` |
+| [requirements-train.txt](../../requirements-train.txt) | Colab packages: `transformers`, `trl`, `peft`, `bitsandbytes`, `datasets`, `accelerate`, `wandb`, `matplotlib`, `scikit-learn`, `pyyaml` |
+| [.gitignore](../../.gitignore) | Keeps raw data, model weights, `.env` and caches out of git |
+| [configs/dataset.json](../../configs/dataset.json) | Settings for the dataset builder (used in stage 04) |
 
 | Folder | Holds |
 |---|---|
 | `data/raw/` | Downloads (git-ignored) |
-| `data/processed/` | Cleaned data, datasets and stats |
+| `data/processed/` | Clean data, datasets and stats files |
 | `src/` | The scripts |
 | `configs/` | Settings files |
-| `notebooks/` | Experiments (empty for now) |
-| `results/` | Metrics and outputs (empty for now) |
-| `docs/` | This learning path |
+| `notebooks/` | The Colab notebook |
+| `results/` | Metrics and plots from real runs |
+| `docs/` | These docs, with charts in `docs/images/` |
 
 ## How to run
 
+Go to the project folder first (see [E01](../errors-and-fixes.md#e01)), then:
+
 ```
-cd C:\Users\Preeti\Desktop\cyber-slm
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements-data.txt
 ```
 
-On Google Colab (later stages), the notebook runs `pip install -r requirements-train.txt` for you.
-
-Optional: create a file named `.env` in the repo root with this line:
+Optional, in a file named `.env` in the project root:
 
 ```
-NVD_API_KEY=your-key-here
+NVD_API_KEY=<your key>
 ```
 
-You can request a key from the [NVD site](https://nvd.nist.gov/developers/request-an-api-key).
+On Colab, the notebook `notebooks/run_on_colab.ipynb` installs `requirements-train.txt` and reads the tokens from Colab Secrets.
 
-## Results
+## Results and metrics
 
-- Python version used: _fill after run_
-- Packages installed without errors: _fill after run_
+Nothing is measured in this stage. See [metrics.md](../metrics.md) for the stages that are.
 
-## Common errors and fixes
+## Errors faced in this stage
 
-| Error | Fix |
-|---|---|
-| `.venv\Scripts\activate` is blocked by PowerShell | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, then activate again. |
-| `ModuleNotFoundError: No module named 'datasketch'` | The environment is not active, or install was skipped. Activate it and run `pip install -r requirements-data.txt`. |
-| `python` is not found | Install Python 3 and tick "Add to PATH", or use `py` instead of `python`. |
-| The key in `.env` seems ignored | The file must be in the repo root and the line must be exactly `NVD_API_KEY=...` with no quotes or spaces. |
+- [E01](../errors-and-fixes.md#e01): commands run from the wrong folder.
+- [E12](../errors-and-fixes.md#e12): README saved as UTF-16, so it looked garbled.
+- [E13](../errors-and-fixes.md#e13): a secret was shown on screen.
 
-## Self-check questions
+## What I learned
 
-1. Why use a virtual environment instead of installing packages globally?
-2. What is in `.gitignore`, and why should `.env` be there?
-3. What does the NVD API key change?
-4. Which stage uses `configs/dataset.json`?
+- Check which folder I am in before I run a command.
+- Save text files as UTF-8.
+- Secrets live in `.env` or Colab Secrets, and I never print them.
+
+## Navigation
+
+Previous: none | [Home](../../README.md) | Next: [Stage 02: Data collection](../stage-02-data-collection/README.md)

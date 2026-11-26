@@ -2,41 +2,49 @@
 
 **Status:** Todo
 
-Previous: [Stage 09: Results and model card](../stage-09-results-and-model-card/README.md) | Home: [README](../../README.md) | Next: none
-
 ## Goal
 
-Pick follow-up ideas once the main pipeline works.
+After the main pipeline works, I pick follow-up ideas and test them one by one.
 Nothing here is planned in detail yet.
 
 ## Concepts
 
-- TODO: ideas to consider, for example predicting [CWE](../glossary.md#cwe) ids, other ATT&CK matrices, or a larger base model.
+Ideas I may try, none started:
+
+- Predict the [CWE](../glossary.md#cwe) id of a CVE (the data already holds CWE ids).
+- Use other ATT&CK matrices (only Enterprise is used now).
+- A larger base model, if the small one is limited.
+- Compare NVD-scored and CNA-scored CVEs separately, since the label source is mixed ([stage 03](../stage-03-data-cleaning/README.md)).
 
 ## Flowchart
 
 ```mermaid
 flowchart LR
-    A["Finished pipeline"] --> B["TODO: choose an extension"]
-    B --> C["TODO: repeat stages 04 to 09 for it"]
+    A["Finished pipeline and results"] --> B["Choose one extension"]
+    B --> C["Repeat stages 04 to 09 for it"]
+    C --> D["Add a journal entry"]
 ```
 
 ## What the code does
 
-TODO: no code yet.
+No code yet.
 
 ## How to run
 
-TODO
+Not applicable yet.
 
-## Results
+## Results and metrics
 
-_fill after run_
+Pending. Nothing has run.
 
-## Common errors and fixes
+## Errors faced in this stage
 
-TODO
+None yet.
 
-## Self-check questions
+## What I learned
 
-TODO (3 to 5 questions)
+Pending.
+
+## Navigation
+
+Previous: [Stage 09: Results and model card](../stage-09-results-and-model-card/README.md) | [Home](../../README.md) | Next: none

@@ -2,6 +2,7 @@
   "config": {
     "train_cap_per_class": 2000,
     "eval_cap": 1000,
+    "balanced_test_per_class": 150,
     "near_dup_threshold": 0.85,
     "num_perm": 128,
     "shingle_size": 3,
@@ -15,48 +16,174 @@
   },
   "steps": {
     "0_loaded": {
-      "count": 0,
-      "classes": {}
+      "count": 138874,
+      "classes": {
+        "HIGH": 51750,
+        "MEDIUM": 64383,
+        "CRITICAL": 19911,
+        "LOW": 2828,
+        "NONE": 2
+      },
+      "cvss_source": {
+        "nvd": 90275,
+        "cna": 48599
+      }
+    },
+    "0b_valid_severity_only": {
+      "count": 138872,
+      "classes": {
+        "HIGH": 51750,
+        "MEDIUM": 64383,
+        "CRITICAL": 19911,
+        "LOW": 2828
+      },
+      "cvss_source": {
+        "nvd": 90275,
+        "cna": 48597
+      }
     },
     "1_exact_dedup": {
-      "count": 0,
-      "classes": {}
+      "count": 131326,
+      "classes": {
+        "HIGH": 48150,
+        "MEDIUM": 60919,
+        "CRITICAL": 19539,
+        "LOW": 2718
+      },
+      "cvss_source": {
+        "nvd": 87252,
+        "cna": 44074
+      }
     },
     "2_near_dedup": {
-      "count": 0,
-      "classes": {}
+      "count": 122752,
+      "classes": {
+        "HIGH": 44738,
+        "MEDIUM": 56949,
+        "CRITICAL": 18517,
+        "LOW": 2548
+      },
+      "cvss_source": {
+        "nvd": 81915,
+        "cna": 40837
+      }
     },
     "3_split_train": {
-      "count": 0,
-      "classes": {}
+      "count": 72517,
+      "classes": {
+        "HIGH": 26952,
+        "MEDIUM": 32640,
+        "CRITICAL": 11582,
+        "LOW": 1343
+      },
+      "cvss_source": {
+        "nvd": 61647,
+        "cna": 10870
+      }
     },
     "3_split_val": {
-      "count": 0,
-      "classes": {}
+      "count": 9378,
+      "classes": {
+        "MEDIUM": 4705,
+        "CRITICAL": 1230,
+        "HIGH": 3271,
+        "LOW": 172
+      },
+      "cvss_source": {
+        "cna": 4744,
+        "nvd": 4634
+      }
     },
     "3_split_test": {
-      "count": 0,
-      "classes": {}
+      "count": 40857,
+      "classes": {
+        "MEDIUM": 19604,
+        "HIGH": 14515,
+        "CRITICAL": 5705,
+        "LOW": 1033
+      },
+      "cvss_source": {
+        "cna": 25223,
+        "nvd": 15634
+      }
     },
     "4_no_train_leak_val": {
-      "count": 0,
-      "classes": {}
+      "count": 9378,
+      "classes": {
+        "MEDIUM": 4705,
+        "CRITICAL": 1230,
+        "HIGH": 3271,
+        "LOW": 172
+      },
+      "cvss_source": {
+        "cna": 4744,
+        "nvd": 4634
+      }
     },
     "4_no_train_leak_test": {
-      "count": 0,
-      "classes": {}
+      "count": 40857,
+      "classes": {
+        "MEDIUM": 19604,
+        "HIGH": 14515,
+        "CRITICAL": 5705,
+        "LOW": 1033
+      },
+      "cvss_source": {
+        "cna": 25223,
+        "nvd": 15634
+      }
     },
     "5_final_train": {
-      "count": 0,
-      "classes": {}
+      "count": 7343,
+      "classes": {
+        "MEDIUM": 2000,
+        "LOW": 1343,
+        "HIGH": 2000,
+        "CRITICAL": 2000
+      },
+      "cvss_source": {
+        "cna": 1173,
+        "nvd": 6170
+      }
     },
     "5_final_val": {
-      "count": 0,
-      "classes": {}
+      "count": 1000,
+      "classes": {
+        "MEDIUM": 470,
+        "HIGH": 386,
+        "CRITICAL": 127,
+        "LOW": 17
+      },
+      "cvss_source": {
+        "cna": 504,
+        "nvd": 496
+      }
     },
     "5_final_test": {
-      "count": 0,
-      "classes": {}
+      "count": 1000,
+      "classes": {
+        "MEDIUM": 510,
+        "HIGH": 337,
+        "CRITICAL": 127,
+        "LOW": 26
+      },
+      "cvss_source": {
+        "cna": 621,
+        "nvd": 379
+      }
+    },
+    "5_final_test_balanced": {
+      "count": 600,
+      "classes": {
+        "MEDIUM": 150,
+        "HIGH": 150,
+        "CRITICAL": 150,
+        "LOW": 150
+      },
+      "cvss_source": {
+        "cna": 382,
+        "nvd": 218
+      }
     }
   },
   "leakage_removed": {

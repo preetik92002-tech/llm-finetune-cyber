@@ -216,6 +216,15 @@ def main():
                 failed.append(run_name(rank, size))  # keep going; one failure should not lose the others
 
     rows = collect(plan, base)
+    # Never publish a placeholder table or an empty plot. If no run has metrics
+    # (for example every run failed), write nothing and say so. An all-"not run"
+    # table once looked like a result when it was not one.
+    if not any(r["metrics"] for r in rows):
+        print("No run has metrics yet, so no table or plot was written.")
+        if failed:
+            print(f"Failed runs: {', '.join(failed)}")
+            sys.exit(1)
+        return
     write_table(rows, RESULTS / "ablations.md")
     plot_data_size(rows, RESULTS / "ablations_data_size.png")
     print(f"Wrote {RESULTS / 'ablations.md'} and {RESULTS / 'ablations_data_size.png'}")

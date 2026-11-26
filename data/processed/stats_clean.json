@@ -1,0 +1,27 @@
+{
+  "provenance": "Entered by hand from the console output of an earlier run of src/clean_cves.py (before the NONE filter existed and before the script wrote this file). The severity and cvss_source counts were re-counted from cves_clean.jsonl and match. Running src/clean_cves.py again overwrites this file with script-written numbers.",
+  "downloaded_per_year": {
+    "2022": 26431,
+    "2023": 30949,
+    "2024": 40704,
+    "2025": 49972
+  },
+  "cleaning_funnel": {
+    "read": 148056,
+    "not_rejected": 141992,
+    "has_cvss_v3_severity": 138891,
+    "severity_not_none": null,
+    "description_long_enough": 138874
+  },
+  "severity_distribution": {
+    "CRITICAL": 19911,
+    "HIGH": 51750,
+    "MEDIUM": 64383,
+    "LOW": 2828,
+    "NONE": 2
+  },
+  "cvss_source": {
+    "nvd": 90275,
+    "cna": 48599
+  }
+}

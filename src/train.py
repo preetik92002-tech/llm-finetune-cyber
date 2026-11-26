@@ -190,7 +190,19 @@ def main():
         processing_class=tokenizer,  # applies the chat template and tokenizes
         peft_config=peft_config,  # wraps the model with LoRA adapters
     )
-    trainer.train()
+    train_result = trainer.train()
+
+    # Save the loss history and run time so docs and figures can use them
+    # (src/make_figures.py draws the loss curve from this file). On Colab, copy
+    # results/train_<name>.json back to the repo.
+    log_file = ROOT / "results" / f"train_{output_dir.name}.json"
+    log_file.parent.mkdir(exist_ok=True)
+    log_file.write_text(json.dumps({
+        "config": cfg,
+        "train_runtime_seconds": train_result.metrics.get("train_runtime"),
+        "final_train_loss": train_result.metrics.get("train_loss"),
+        "log_history": trainer.state.log_history,  # loss, learning rate and step for each logged step
+    }, indent=2), encoding="utf-8")
 
     # Saves only the adapter (a few MB), not the whole base model.
     trainer.save_model(str(output_dir))
