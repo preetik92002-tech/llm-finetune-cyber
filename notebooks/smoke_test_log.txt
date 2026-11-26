@@ -1,0 +1,47 @@
+GPU: Tesla T4 (compute capability 7.5). Precision: fp16
+Severity examples: 50
+Total training examples: 50
+Loading weights:   0%|          | 0/290 [00:00<?, ?it/s]Loading weights:   0%|          | 1/290 [00:00<01:41,  2.86it/s]Loading weights:   3%|▎         | 9/290 [00:00<00:11, 25.15it/s]Loading weights:  18%|█▊        | 51/290 [00:00<00:01, 138.25it/s]Loading weights:  30%|███       | 88/290 [00:00<00:00, 205.71it/s]Loading weights:  44%|████▍     | 129/290 [00:00<00:00, 264.50it/s]Loading weights:  57%|█████▋    | 165/290 [00:00<00:00, 292.09it/s]Loading weights:  70%|███████   | 203/290 [00:00<00:00, 316.79it/s]Loading weights:  82%|████████▏ | 238/290 [00:01<00:00, 308.94it/s]Loading weights:  93%|█████████▎| 271/290 [00:01<00:00, 291.17it/s]Loading weights: 100%|██████████| 290/290 [00:01<00:00, 230.05it/s]
+Model config dtype: torch.float16
+[dtypes] base model right after loading (non-quantized layers show the load dtype)
+  trainable parameters by dtype:       {'float16': 136206208}
+  not-quantized parameters by dtype:   {'float16': 136206208}
+  4-bit packed weights (uint8):        178,913,280
+Weights & Biases logging: off (no WANDB_API_KEY)
+Tokenizing train dataset:   0%|          | 0/50 [00:00<?, ? examples/s]Tokenizing train dataset: 100%|██████████| 50/50 [00:00<00:00, 660.53 examples/s]
+Building labels for train dataset:   0%|          | 0/50 [00:00<?, ? examples/s]Building labels for train dataset: 100%|██████████| 50/50 [00:00<00:00, 2650.23 examples/s]
+Truncating train dataset:   0%|          | 0/50 [00:00<?, ? examples/s]Truncating train dataset: 100%|██████████| 50/50 [00:00<00:00, 3354.21 examples/s]
+Dropping fully masked examples from train dataset:   0%|          | 0/50 [00:00<?, ? examples/s]Dropping fully masked examples from train dataset: 100%|██████████| 50/50 [00:00<00:00, 5573.97 examples/s]
+SFTConfig model_init_kwargs: not set (unused: the model is already loaded)
+Trainer precision flags: fp16=True, bf16=False
+[dtypes] BEFORE the float32 cast (after the PEFT model was created)
+  trainable parameters by dtype:       {'bfloat16': 8798208}
+  not-quantized parameters by dtype:   {'float32': 136206208, 'bfloat16': 8798208}
+  4-bit packed weights (uint8):        178,913,280
+[dtypes] AFTER the float32 cast
+  trainable parameters by dtype:       {'float32': 8798208}
+  not-quantized parameters by dtype:   {'float32': 145004416}
+  4-bit packed weights (uint8):        178,913,280
+  0%|          | 0/20 [00:00<?, ?it/s]  5%|▌         | 1/20 [00:04<01:23,  4.37s/it]                                                5%|▌         | 1/20 [00:04<01:23,  4.37s/it] 10%|█         | 2/20 [00:06<00:55,  3.09s/it]                                               10%|█         | 2/20 [00:06<00:55,  3.09s/it] 15%|█▌        | 3/20 [00:08<00:46,  2.74s/it]                                               15%|█▌        | 3/20 [00:08<00:46,  2.74s/it] 20%|██        | 4/20 [00:11<00:44,  2.78s/it]                                               20%|██        | 4/20 [00:11<00:44,  2.78s/it] 25%|██▌       | 5/20 [00:13<00:38,  2.58s/it]                                               25%|██▌       | 5/20 [00:13<00:38,  2.58s/it] 30%|███       | 6/20 [00:16<00:34,  2.43s/it]                                               30%|███       | 6/20 [00:16<00:34,  2.43s/it] 35%|███▌      | 7/20 [00:18<00:30,  2.35s/it]                                               35%|███▌      | 7/20 [00:18<00:30,  2.35s/it] 40%|████      | 8/20 [00:20<00:27,  2.29s/it]                                               40%|████      | 8/20 [00:20<00:27,  2.29s/it] 45%|████▌     | 9/20 [00:22<00:26,  2.37s/it]                                               45%|████▌     | 9/20 [00:22<00:26,  2.37s/it] 50%|█████     | 10/20 [00:25<00:24,  2.45s/it]                                                50%|█████     | 10/20 [00:25<00:24,  2.45s/it] 55%|█████▌    | 11/20 [00:27<00:21,  2.36s/it]                                                55%|█████▌    | 11/20 [00:27<00:21,  2.36s/it] 60%|██████    | 12/20 [00:30<00:18,  2.32s/it]                                                60%|██████    | 12/20 [00:30<00:18,  2.32s/it] 65%|██████▌   | 13/20 [00:32<00:16,  2.29s/it]                                                65%|██████▌   | 13/20 [00:32<00:16,  2.29s/it] 70%|███████   | 14/20 [00:34<00:13,  2.28s/it]                                                70%|███████   | 14/20 [00:34<00:13,  2.28s/it] 75%|███████▌  | 15/20 [00:37<00:12,  2.46s/it]                                                75%|███████▌  | 15/20 [00:37<00:12,  2.46s/it] 80%|████████  | 16/20 [00:39<00:09,  2.38s/it]                                                80%|████████  | 16/20 [00:39<00:09,  2.38s/it] 85%|████████▌ | 17/20 [00:41<00:07,  2.35s/it]                                                85%|████████▌ | 17/20 [00:41<00:07,  2.35s/it] 90%|█████████ | 18/20 [00:43<00:04,  2.28s/it]                                                90%|█████████ | 18/20 [00:43<00:04,  2.28s/it] 95%|█████████▌| 19/20 [00:46<00:02,  2.25s/it]                                                95%|█████████▌| 19/20 [00:46<00:02,  2.25s/it]100%|██████████| 20/20 [00:48<00:00,  2.31s/it]                                               100%|██████████| 20/20 [00:48<00:00,  2.31s/it]                                               100%|██████████| 20/20 [00:48<00:00,  2.31s/it]100%|██████████| 20/20 [00:48<00:00,  2.43s/it]
+{'loss': '0.46', 'grad_norm': 'nan', 'learning_rate': '0', 'entropy': '0.5302', 'mean_token_accuracy': '0.8214', 'num_tokens': '730', 'epoch': '0.1667'}
+{'loss': '0.7911', 'grad_norm': '34.98', 'learning_rate': '0', 'entropy': '0.533', 'mean_token_accuracy': '0.7679', 'num_tokens': '1664', 'epoch': '0.3333'}
+{'loss': '0.6864', 'grad_norm': 'nan', 'learning_rate': '0.0001', 'entropy': '0.5116', 'mean_token_accuracy': '0.7946', 'num_tokens': '2466', 'epoch': '0.5'}
+{'loss': '0.4316', 'grad_norm': '15.97', 'learning_rate': '0.0001', 'entropy': '0.5126', 'mean_token_accuracy': '0.8542', 'num_tokens': '3352', 'epoch': '0.6667'}
+{'loss': '0.7241', 'grad_norm': '12.83', 'learning_rate': '0.0002', 'entropy': '0.2326', 'mean_token_accuracy': '0.8616', 'num_tokens': '4295', 'epoch': '0.8333'}
+{'loss': '0.471', 'grad_norm': '7.991', 'learning_rate': '0.0001985', 'entropy': '0.333', 'mean_token_accuracy': '0.8393', 'num_tokens': '5209', 'epoch': '1'}
+{'loss': '0.3779', 'grad_norm': '3.745', 'learning_rate': '0.000194', 'entropy': '0.4051', 'mean_token_accuracy': '0.814', 'num_tokens': '6027', 'epoch': '1.167'}
+{'loss': '0.321', 'grad_norm': '4.952', 'learning_rate': '0.0001866', 'entropy': '0.3749', 'mean_token_accuracy': '0.9018', 'num_tokens': '6952', 'epoch': '1.333'}
+{'loss': '0.3256', 'grad_norm': '3.086', 'learning_rate': '0.0001766', 'entropy': '0.3281', 'mean_token_accuracy': '0.8542', 'num_tokens': '7836', 'epoch': '1.5'}
+{'loss': '0.6534', 'grad_norm': '6.894', 'learning_rate': '0.0001643', 'entropy': '0.3312', 'mean_token_accuracy': '0.8452', 'num_tokens': '8871', 'epoch': '1.667'}
+{'loss': '0.3055', 'grad_norm': '3.667', 'learning_rate': '0.00015', 'entropy': '0.3227', 'mean_token_accuracy': '0.8973', 'num_tokens': '9675', 'epoch': '1.833'}
+{'loss': '0.5913', 'grad_norm': '9.464', 'learning_rate': '0.0001342', 'entropy': '0.299', 'mean_token_accuracy': '0.7321', 'num_tokens': '1.042e+04', 'epoch': '2'}
+{'loss': '0.1494', 'grad_norm': '1.58', 'learning_rate': '0.0001174', 'entropy': '0.2649', 'mean_token_accuracy': '0.9375', 'num_tokens': '1.12e+04', 'epoch': '2.167'}
+{'loss': '0.3397', 'grad_norm': '2.346', 'learning_rate': '0.0001', 'entropy': '0.4135', 'mean_token_accuracy': '0.8661', 'num_tokens': '1.205e+04', 'epoch': '2.333'}
+{'loss': '0.2545', 'grad_norm': '4.9', 'learning_rate': '8.264e-05', 'entropy': '0.4319', 'mean_token_accuracy': '0.9643', 'num_tokens': '1.304e+04', 'epoch': '2.5'}
+{'loss': '0.3373', 'grad_norm': '3.675', 'learning_rate': '6.58e-05', 'entropy': '0.3331', 'mean_token_accuracy': '0.881', 'num_tokens': '1.391e+04', 'epoch': '2.667'}
+{'loss': '0.2708', 'grad_norm': '3.209', 'learning_rate': '5e-05', 'entropy': '0.3281', 'mean_token_accuracy': '0.9286', 'num_tokens': '1.472e+04', 'epoch': '2.833'}
+{'loss': '0.4082', 'grad_norm': '4.091', 'learning_rate': '3.572e-05', 'entropy': '0.3676', 'mean_token_accuracy': '0.8095', 'num_tokens': '1.563e+04', 'epoch': '3'}
+{'loss': '0.3303', 'grad_norm': '6.473', 'learning_rate': '2.34e-05', 'entropy': '0.3572', 'mean_token_accuracy': '0.8214', 'num_tokens': '1.652e+04', 'epoch': '3.167'}
+{'loss': '0.2003', 'grad_norm': '1.644', 'learning_rate': '1.34e-05', 'entropy': '0.2936', 'mean_token_accuracy': '0.9286', 'num_tokens': '1.728e+04', 'epoch': '3.333'}
+{'train_runtime': '48.58', 'train_samples_per_second': '3.293', 'train_steps_per_second': '0.412', 'train_loss': '0.4215', 'epoch': '3.333'}
+Adapter saved to /content/llm-finetune-cyber/outputs/smoke_test
