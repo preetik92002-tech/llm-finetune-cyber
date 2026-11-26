@@ -113,6 +113,19 @@ Source: `data/processed/stats_attack.json`.
 
 ## Stage 06: QLoRA training (main run)
 
+Planned in `configs/qlora_05b.yaml` (free Colab T4). The data selection and length check were run on the laptop with `train.py`'s functions; the training itself has not run.
+
+| Item | Value |
+|---|---|
+| Severity examples (up to 1,000 per class) | 4,000 |
+| ATT&CK examples | 2,000 |
+| Total training examples | 6,000 |
+| Steps per epoch (batch 4 x accumulation 4) | 375 |
+| Steps in the full run (2 epochs) | 750 |
+| Examples longer than 512 tokens (Qwen tokenizer) | 50 of 6,000 (0.8%) |
+| Seconds per step on the T4 | Pending |
+| Estimated total time | Pending |
+
 | Item | Value |
 |---|---|
 | Final training loss | Pending |

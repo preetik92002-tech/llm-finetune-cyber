@@ -240,3 +240,18 @@ Commit: `f004ff8` (14:45).
 **What I checked.** On a tiny CPU model with bfloat16 adapters, the cast turned all trainable parameters into float32 and the assertions passed. The real T4 run is Pending. Its printed counts will show where the bfloat16 came from.
 
 **What I learned.** Print the dtype of the parameters before a long run. A precision flag does not guarantee the parameters have that precision.
+
+---
+
+## Session 13: A plan for a free Colab T4 with limited time
+
+**Goal.** Make the main run fit a free T4: a smaller model, a smaller dataset, and a way to survive a disconnect.
+
+**What I did.**
+- `configs/qlora_05b.yaml`: `Qwen/Qwen2.5-0.5B-Instruct`, about 4,000 severity examples (up to 1,000 per class; LOW has 1,343), about 2,000 ATT&CK examples, 2 epochs, max length 512, LoRA r=16 and alpha=32, learning rate 2e-4. Precision follows the GPU (fp16 on a T4).
+- `train.py` got `--max_steps` (a test run in its own `<output_dir>_testN` folder, never pushed to the Hub), `--output_dir` (for a Google Drive path) and `--resume` (continue from the newest checkpoint). Checkpoints are saved every 100 steps.
+- `train.py` now prints how many examples are longer than max length, the planned number of steps, and, after 10 steps, an estimate of the total time.
+
+**What I checked on my laptop (no GPU).** The data selection gives 4,000 severity examples (1,000 per class) and 2,000 ATT&CK examples, 6,000 in total, which is 375 steps per epoch and 750 steps for 2 epochs. With the Qwen tokenizer, 50 of the 6,000 examples (0.8%) are longer than 512 tokens. The time estimate and the resume step count were tried with fake timings only. The real time per step is Pending until the 10-step test on Colab.
+
+**What I learned.** A truncated example loses the end, which is the answer, so I want to know how many there are before I train. A test run must not share a folder with the real run.

@@ -1,0 +1,49 @@
+# Main run for a FREE Colab T4 with limited time: a 0.5B model and a smaller dataset.
+#
+#   Step 1, test the config for 10 steps (also prints the time estimate for the full run):
+#     python src/train.py --config configs/qlora_05b.yaml --max_steps 10
+#   Step 2, the real run, with checkpoints on Google Drive:
+#     python src/train.py --config configs/qlora_05b.yaml --output_dir /content/drive/MyDrive/cyber-slm/qlora_05b
+#   Step 3, if Colab disconnects, run the same command again with --resume:
+#     python src/train.py --config configs/qlora_05b.yaml --output_dir /content/drive/MyDrive/cyber-slm/qlora_05b --resume
+#
+# Precision is not set here: train.py picks fp16 on a T4 (compute capability 7.5) and
+# bf16 on newer GPUs, and prints the choice at the start.
+
+model_name: Qwen/Qwen2.5-0.5B-Instruct
+
+# Where the adapter and the checkpoints go. A Google Drive path survives a Colab disconnect.
+# Override it on the command line with --output_dir (no need to edit this file).
+output_dir: outputs/qlora_05b
+
+# ---- Data ----
+train_file: data/processed/severity_train.jsonl
+max_samples: null                         # no overall cap on severity examples
+max_samples_per_class: 1000               # up to 1000 per class = about 4000 severity examples
+                                          # (LOW has only 1343 examples, so 1000 is below that)
+attack_file: data/processed/attack_train.jsonl
+max_attack_samples: 2000                  # about 2000 ATT&CK examples
+
+# ---- Training length and size ----
+num_train_epochs: 2
+max_steps: null                           # null = use epochs. --max_steps on the command line overrides it
+max_length: 512                           # tokens per example; train.py prints how many are cut
+per_device_train_batch_size: 4            # lower it if the T4 runs out of memory
+gradient_accumulation_steps: 4            # 4 x 4 = 16 examples per optimizer step
+learning_rate: 0.0002
+warmup_steps: 30
+seed: 42
+
+# ---- LoRA ----
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+
+# ---- Checkpoints ----
+save_steps: 100                           # a checkpoint every 100 steps (needed for --resume)
+save_total_limit: 3                       # keep the newest 3 so Drive does not fill up
+push_to_hub: false                        # checkpoints go to output_dir (Drive), not the Hub
+
+wandb_project: cyber-slm                  # used only if WANDB_API_KEY is set

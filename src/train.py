@@ -9,12 +9,23 @@ smoke test: notebooks/run_on_colab.ipynb.
 
 Usage:
     python src/train.py --config configs/smoke_test.yaml
+
+Options for a long run on free Colab (see configs/qlora_05b.yaml):
+    --max_steps N       stop after N steps (for example 10, to test the config).
+                        Such a test writes to its own folder "<output_dir>_testN" so it
+                        never mixes with the real run, and it never pushes to the Hub.
+    --output_dir PATH   override output_dir, for example a Google Drive folder:
+                        /content/drive/MyDrive/cyber-slm/qlora_05b
+    --resume            continue from the newest checkpoint in output_dir (if any).
+                        Use the same config and the same data as the first run.
 """
 
 import argparse
 import json
+import math
 import os
 import random
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -22,7 +33,8 @@ import torch
 import yaml
 from datasets import Dataset
 from peft import LoraConfig, prepare_model_for_kbit_training
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainerCallback
+from transformers.trainer_utils import get_last_checkpoint
 from trl import SFTConfig, SFTTrainer
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -57,19 +69,93 @@ def load_rows(path, max_samples, seed):
     return rows if max_samples is None else rows[:max_samples]
 
 
+def select_per_class(rows, per_class):
+    """Keep up to per_class examples of each answer (label). Rows are already shuffled."""
+    taken, kept = Counter(), []
+    for r in rows:
+        label = r["completion"][0]["content"].strip()
+        if taken[label] < per_class:
+            kept.append(r)
+            taken[label] += 1
+    print(f"Severity examples per class (limit {per_class}): {dict(taken)}")
+    return kept
+
+
+def report_truncation(dataset, tokenizer, max_length):
+    """Print how many examples are longer than max_length tokens.
+
+    Longer examples are cut at the END, so the assistant answer is the part that is
+    lost. A cut example teaches the model little or nothing. The length is measured
+    with the model's chat template, which is how TRL builds the text (so it is
+    close to, not exactly, what the trainer sees).
+    """
+    lengths = []
+    for row in dataset:
+        text = tokenizer.apply_chat_template(row["prompt"] + row["completion"], tokenize=False)
+        lengths.append(len(tokenizer(text, add_special_tokens=False)["input_ids"]))
+    lengths.sort()
+    too_long = sum(1 for n in lengths if n > max_length)
+    print(f"Length check (max_length={max_length}): {too_long} of {len(lengths)} examples "
+          f"({100 * too_long / len(lengths):.1f}%) are longer and will be truncated. "
+          f"Median length {lengths[len(lengths) // 2]}, longest {lengths[-1]} tokens.")
+    return too_long
+
+
+def planned_steps(n_examples, batch_size, grad_accum, epochs):
+    """Optimizer steps of the full run, computed the way the Hugging Face Trainer does."""
+    batches_per_epoch = math.ceil(n_examples / batch_size)
+    steps_per_epoch = max(batches_per_epoch // grad_accum, 1)
+    return math.ceil(epochs * steps_per_epoch), steps_per_epoch
+
+
+class TimeEstimate(TrainerCallback):
+    """After the first `after_steps` steps, print an estimate of the total time.
+
+    The estimate is: seconds per step x steps of the FULL run (even if --max_steps
+    stops the run early, so a 10-step test still tells me the time of the real run).
+    The first steps include start-up work, so the estimate is a little high.
+    Time spent saving checkpoints is not included.
+    """
+
+    def __init__(self, full_steps, after_steps=10):
+        self.full_steps, self.after_steps = full_steps, after_steps
+        self.t0 = self.start_step = None
+
+    def on_train_begin(self, args, state, control, **kwargs):
+        self.t0, self.start_step = time.time(), state.global_step  # global_step is > 0 when resuming
+
+    def on_step_end(self, args, state, control, **kwargs):
+        if state.global_step - self.start_step == self.after_steps:
+            per_step = (time.time() - self.t0) / self.after_steps
+            total, left = per_step * self.full_steps, per_step * max(self.full_steps - state.global_step, 0)
+            fmt = lambda s: f"{int(s // 3600)} h {int(s % 3600 // 60)} min"
+            print(f"\n[time estimate] {per_step:.1f} s/step over the first {self.after_steps} steps. "
+                  f"Full run = {self.full_steps} steps, about {fmt(total)} in total, "
+                  f"about {fmt(left)} still to go.\n")
+
+
 def build_dataset(cfg):
     """Severity data, optionally mixed with ATT&CK data.
 
     Config keys:
       train_file          severity chat JSONL (required)
       max_samples         cap on severity examples (null = all)
+      max_samples_per_class  take up to this many severity examples of each class
+                          (null = off). Gives a class-balanced severity set.
       attack_file         ATT&CK chat JSONL (null or missing = severity only)
       max_attack_samples  cap on ATT&CK examples, so the two tasks stay balanced
                           (null = all; ATT&CK files can be much larger or smaller
                           than the severity file)
     """
     seed = cfg["seed"]
-    severity = load_rows(ROOT / cfg["train_file"], cfg.get("max_samples"), seed)
+    per_class = cfg.get("max_samples_per_class")
+    # With a per-class limit, read the whole file first, then take up to that many of
+    # each severity. A class with fewer examples keeps all it has (LOW has only 1343).
+    severity = load_rows(ROOT / cfg["train_file"], None if per_class else cfg.get("max_samples"), seed)
+    if per_class:
+        severity = select_per_class(severity, per_class)
+        if cfg.get("max_samples"):  # an extra overall cap, if one is set
+            severity = severity[: cfg["max_samples"]]
     rows = list(severity)
     print(f"Severity examples: {len(severity)}")
 
@@ -113,7 +199,21 @@ def dtype_summary(model, title):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True, help="path to a YAML config")
-    cfg = load_config(parser.parse_args().config)
+    parser.add_argument("--max_steps", type=int, help="stop after N steps (a test run, kept in its own folder)")
+    parser.add_argument("--output_dir", help="override output_dir, e.g. a Google Drive folder")
+    parser.add_argument("--resume", action="store_true", help="continue from the newest checkpoint in output_dir")
+    cli = parser.parse_args()
+    cfg = load_config(cli.config)
+
+    if cli.output_dir:
+        cfg["output_dir"] = cli.output_dir  # an absolute path (such as on Drive) is used as it is
+    if cli.max_steps:
+        # A short test run. Give it its own folder, so its adapter and checkpoints can never
+        # be mistaken for the real run, and never upload it.
+        cfg["max_steps"] = cli.max_steps
+        cfg["output_dir"] = str(cfg["output_dir"]).rstrip("/\\") + f"_test{cli.max_steps}"
+        cfg["push_to_hub"] = False
+        print(f"Test run of {cli.max_steps} steps. Output goes to {cfg['output_dir']}")
 
     if not torch.cuda.is_available():
         raise SystemExit("No CUDA GPU found. 4-bit QLoRA needs one. Use Google Colab (GPU runtime).")
@@ -148,6 +248,14 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(cfg["model_name"])
     if tokenizer.pad_token is None:  # batches need a padding token
         tokenizer.pad_token = tokenizer.eos_token
+
+    # ---- How many examples are too long, and how long the full run will be ----
+    report_truncation(dataset, tokenizer, cfg["max_length"])
+    full_steps, steps_per_epoch = planned_steps(
+        len(dataset), cfg["per_device_train_batch_size"], cfg["gradient_accumulation_steps"],
+        cfg.get("num_train_epochs", 1))
+    print(f"Plan: {len(dataset)} examples, {steps_per_epoch} steps per epoch, "
+          f"{full_steps} steps in the full run (epochs: {cfg.get('num_train_epochs', 1)}).")
 
     # ---- Model in 4-bit (the "Q" in QLoRA) ----
     bnb_config = BitsAndBytesConfig(
@@ -266,19 +374,35 @@ def main():
         assert "bfloat16" not in trainable, f"Trainable bfloat16 parameters remain: {dict(trainable)}"
         assert "float16" not in trainable, f"Trainable float16 parameters remain: {dict(trainable)}"
 
-    train_result = trainer.train()
+    trainer.add_callback(TimeEstimate(full_steps, after_steps=10))  # prints the time estimate after 10 steps
+
+    # ---- Resume ----
+    # --resume continues from the newest "checkpoint-N" folder in output_dir. A
+    # checkpoint holds the adapter, optimizer, scheduler and step counter, so training
+    # goes on exactly where it stopped (for example after Colab disconnected).
+    # output_dir can be on Google Drive, which survives a disconnect.
+    resume_from = None
+    if cli.resume:
+        resume_from = get_last_checkpoint(str(output_dir)) if output_dir.is_dir() else None
+        print(f"Resuming from {resume_from}" if resume_from
+              else f"--resume given but no checkpoint found in {output_dir}. Starting from the beginning.")
+
+    train_result = trainer.train(resume_from_checkpoint=resume_from)
 
     # Save the loss history and run time so docs and figures can use them
     # (src/make_figures.py draws the loss curve from this file). On Colab, copy
     # results/train_<name>.json back to the repo.
-    log_file = ROOT / "results" / f"train_{output_dir.name}.json"
-    log_file.parent.mkdir(exist_ok=True)
-    log_file.write_text(json.dumps({
+    log_text = json.dumps({
         "config": cfg,
         "train_runtime_seconds": train_result.metrics.get("train_runtime"),
         "final_train_loss": train_result.metrics.get("train_loss"),
         "log_history": trainer.state.log_history,  # loss, learning rate and step for each logged step
-    }, indent=2), encoding="utf-8")
+    }, indent=2)
+    log_file = ROOT / "results" / f"train_{output_dir.name}.json"
+    log_file.parent.mkdir(exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    log_file.write_text(log_text, encoding="utf-8")
+    (output_dir / "train_log.json").write_text(log_text, encoding="utf-8")  # also next to the adapter (e.g. on Drive)
 
     # Saves only the adapter (a few MB), not the whole base model.
     trainer.save_model(str(output_dir))

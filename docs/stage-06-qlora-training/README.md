@@ -35,7 +35,19 @@ flowchart LR
 
 ## How to run
 
-On Colab, after the smoke test works:
+On Colab, after the smoke test works. For a **free T4 with limited time** use [configs/qlora_05b.yaml](../../configs/qlora_05b.yaml) (0.5B model, about 4,000 severity and 2,000 ATT&CK examples, 2 epochs, max length 512):
+
+```
+python src/train.py --config configs/qlora_05b.yaml --max_steps 10
+python src/train.py --config configs/qlora_05b.yaml --output_dir /content/drive/MyDrive/cyber-slm/qlora_05b
+python src/train.py --config configs/qlora_05b.yaml --output_dir /content/drive/MyDrive/cyber-slm/qlora_05b --resume
+```
+
+1. The first command is a 10-step test. It writes to its own `_test10` folder and prints the estimated time of the full run after step 10.
+2. The second is the real run. Checkpoints are saved every 100 steps to the Drive folder (the newest 3 are kept).
+3. The third continues from the newest checkpoint after a disconnect. Use the same config and data.
+
+`train.py` also prints how many examples are longer than the max length. The larger run uses `configs/qlora_main.yaml`:
 
 ```
 python src/train.py --config configs/qlora_main.yaml
