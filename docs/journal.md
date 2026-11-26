@@ -174,3 +174,19 @@ Commit: `f004ff8` (14:45).
 - Re-run `clean_cves.py` so `stats_clean.json` is written by the script and includes the NONE step.
 - Understand the NVD/CNA shift in the labels.
 - Smoke test on Colab ([stage 05](stage-05-smoke-test/README.md)), then the main run.
+
+---
+
+## Session 9: Evaluation per label source
+
+**Goal.** Make the label-source shift from session 7 visible in the evaluation, so I can tell a weak model from a weak match between train and test labels.
+
+**What I changed.**
+- `build_cve_dataset.py` now writes a separate `meta` field (`id` and `cvss_source`) on every severity line, next to the unchanged chat `messages`. `train.py` reads only `messages`, so training is not affected.
+- `evaluate.py` now reports every severity metric three times: all samples, NVD labels only and CNA labels only, each with its sample count. The result JSON keeps the all-samples numbers under `severity` and adds `severity_by_source`.
+
+**What I tested.** On a small made-up set, the three groups gave the counts and scores I computed by hand. A test file without `meta` gives empty NVD and CNA groups and a note, with no crash. I did not run the model.
+
+**What is still open.** The current `severity_*.jsonl` files were written before this change and have no `meta`. I have to run `python src\build_cve_dataset.py` again. The seed is unchanged, so the sampled examples should stay the same. All per-source scores are Pending until an evaluation runs on Colab.
+
+**What I learned.** Keep extra information next to the model input, not inside it. Then the same file serves training and analysis.

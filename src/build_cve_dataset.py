@@ -119,8 +119,14 @@ def snapshot(stats, step, records):
 
 
 def to_chat(record):
-    """One training example in chat format for the severity task."""
+    """One example in chat format for the severity task.
+
+    "messages" is what the model sees. "meta" sits next to it and is never shown to
+    the model: it keeps the CVE id and the score source ("nvd" or "cna"), so
+    evaluate.py can report metrics per source. train.py reads only "messages".
+    """
     return {
+        "meta": {"id": record["id"], "cvss_source": record["source"]},
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"CVE description: {record['text']}"},

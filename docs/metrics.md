@@ -123,6 +123,10 @@ Source: `data/processed/stats_attack.json`.
 | Severity accuracy | Pending | Pending | Pending |
 | Severity macro-F1 | Pending | Pending | Pending |
 | Severity unparseable outputs | Pending | Pending | Pending |
+| Severity accuracy, NVD labels only (with n) | Pending | Pending | Pending |
+| Severity macro-F1, NVD labels only | Pending | Pending | Pending |
+| Severity accuracy, CNA labels only (with n) | Pending | Pending | Pending |
+| Severity macro-F1, CNA labels only | Pending | Pending | Pending |
 | ATT&CK exact match | Pending | Pending | Pending |
 | ATT&CK parent-technique accuracy | Pending | Pending | Pending |
 | ATT&CK unparseable outputs | Pending | Pending | Pending |

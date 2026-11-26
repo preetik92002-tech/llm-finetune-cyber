@@ -6,7 +6,9 @@ Modes
   fine-tuned  base model + LoRA adapter (--adapter is required)
 
 Metrics
-  severity : accuracy, macro-F1, confusion matrix, unparseable count
+  severity : accuracy, macro-F1, confusion matrix, unparseable count.
+             Also reported separately for samples with cvss_source = nvd and = cna
+             (results JSON key "severity_by_source", with sample counts).
   ATT&CK   : exact-match accuracy on the technique id, parent-technique accuracy
              (T1566 for T1566.001), unparseable count, ids that do not exist
   halluc.  : how often the model gives a severity for CVE ids that do not exist
@@ -70,7 +72,12 @@ def read_jsonl(path):
 
 def load_test_rows(path, max_samples, seed):
     """Test file -> list of {"prompt": [system, user], "gold": answer text}."""
-    rows = [{"prompt": r["messages"][:-1], "gold": r["messages"][-1]["content"].strip()} for r in read_jsonl(path)]
+    # "meta" is a separate field next to "messages" (written by build_cve_dataset.py).
+    # It holds the cvss_source ("nvd" or "cna"). Older test files do not have it,
+    # so the source is then None.
+    rows = [{"prompt": r["messages"][:-1],
+             "gold": r["messages"][-1]["content"].strip(),
+             "source": (r.get("meta") or {}).get("cvss_source")} for r in read_jsonl(path)]
     if not rows:
         raise SystemExit(f"{path} has no examples.")
     if max_samples and len(rows) > max_samples:
@@ -180,9 +187,32 @@ def parent_of(technique_id):
 
 
 # ------------------------------------------------------------------ metrics
+def severity_by_source(golds, preds, sources):
+    """The same severity metrics three times: all samples, only NVD labels, only CNA labels.
+
+    Why: the label source shifts between train and test (train is mostly NVD scores,
+    the natural test file mostly CNA scores). A single number would mix the two. Each
+    part has its own sample count "n" so small groups are visible.
+    """
+    def pick(source):
+        idx = [i for i, s in enumerate(sources) if source is None or s == source]
+        return severity_metrics([golds[i] for i in idx], [preds[i] for i in idx])
+
+    out = {"all": pick(None), "nvd": pick("nvd"), "cna": pick("cna")}
+    known = out["nvd"]["n"] + out["cna"]["n"]
+    out["samples_without_source"] = len(golds) - known  # rows with no cvss_source in the test file
+    if known == 0:
+        out["note"] = ("The test file has no cvss_source metadata, so the NVD and CNA parts are empty. "
+                       "Run src/build_cve_dataset.py again to add it.")
+    return out
+
+
 def severity_metrics(golds, preds):
     """Accuracy, macro-F1 and confusion matrix. Unparseable outputs count as wrong."""
     n = len(golds)
+    if n == 0:  # an empty group (for example no CNA samples): report that instead of dividing by zero
+        return {"n": 0, "accuracy": None, "accuracy_on_parseable": None, "macro_f1": None,
+                "unparseable": 0, "unparseable_rate": None, "per_class": {}, "confusion_matrix": None}
     columns = SEVERITY_LABELS + [UNPARSEABLE]
     matrix = {g: {c: 0 for c in columns} for g in SEVERITY_LABELS}
     for g, p in zip(golds, preds):
@@ -357,9 +387,14 @@ def main():
                            args.batch_size, args.max_new_tokens)
         golds = [r["gold"].upper() for r in rows]
         preds = [parse_severity(o) for o in outputs]
+        sources = [r["source"] for r in rows]  # "nvd", "cna" or None
+        # "severity" keeps the all-samples metrics (other scripts read it).
+        # "severity_by_source" holds the same metrics for all, nvd and cna.
         result["severity"] = severity_metrics(golds, preds)
+        result["severity_by_source"] = severity_by_source(golds, preds, sources)
         plot_confusion(result["severity"], RESULTS / f"{name}_severity_confusion.png", f"Severity: {name}")
-        predictions += [{"task": "severity", "gold": g, "pred": pr, "raw": o} for g, pr, o in zip(golds, preds, outputs)]
+        predictions += [{"task": "severity", "cvss_source": src, "gold": g, "pred": pr, "raw": o}
+                        for g, pr, o, src in zip(golds, preds, outputs, sources)]
 
     # ---- ATT&CK ----
     if args.task in ("attack", "both"):
@@ -396,6 +431,14 @@ def main():
     if "severity" in result:
         s = result["severity"]
         print(f"Severity: accuracy {s['accuracy']:.3f}, macro-F1 {s['macro_f1']:.3f}, unparseable {s['unparseable']}/{s['n']}")
+        for part in ("nvd", "cna"):  # the same numbers per label source
+            p = result["severity_by_source"][part]
+            if p["n"]:
+                print(f"  {part.upper()} only: n={p['n']}, accuracy {p['accuracy']:.3f}, macro-F1 {p['macro_f1']:.3f}")
+            else:
+                print(f"  {part.upper()} only: n=0")
+        if result["severity_by_source"].get("note"):
+            print("  " + result["severity_by_source"]["note"])
     if "attack" in result:
         a = result["attack"]
         print(f"ATT&CK: exact {a['exact_match_accuracy']:.3f}, parent {a['parent_accuracy']:.3f}, unparseable {a['unparseable']}/{a['n']}")

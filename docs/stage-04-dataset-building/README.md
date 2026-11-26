@@ -73,7 +73,7 @@ Output files in `data/processed/`:
 
 | File | Content |
 |---|---|
-| `severity_train.jsonl`, `severity_val.jsonl`, `severity_test.jsonl` | Severity examples, messages only |
+| `severity_train.jsonl`, `severity_val.jsonl`, `severity_test.jsonl` | Severity examples: `messages` (what the model sees) plus a separate `meta` field with the CVE id and `cvss_source`. Files built before this field was added have no `meta`; run the builder again to add it. The seed is unchanged, so the sampling should be the same. |
 | `severity_test_balanced.jsonl` | Up to 150 test examples per class |
 | `attack_train.jsonl`, `attack_val.jsonl`, `attack_test.jsonl` | ATT&CK examples, messages only |
 | `stats_cve.json`, `stats_attack.json` | Counts after every step |

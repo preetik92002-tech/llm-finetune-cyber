@@ -17,6 +17,7 @@ Fine-tuning only counts if it beats the [baseline](../glossary.md#baseline).
 - Outputs that I cannot read as a label count as wrong and are counted separately as "unparseable".
 - The [hallucination](../glossary.md#hallucination) check asks for the severity of CVE ids that do not exist (years 2090 to 2099). A good model says it does not know.
 - I will run the severity test twice: on the natural test file and on `severity_test_balanced.jsonl`.
+- **Every severity metric is reported three times:** on all samples, only on samples whose label came from the NVD, and only on samples whose label came from a CNA. Train is mostly NVD labels and the natural test file is mostly CNA labels ([stage 04](../stage-04-dataset-building/README.md)), so one number would mix two kinds of label. Each group also has its own sample count, so a tiny group is easy to spot.
 
 ## Flowchart
 
@@ -44,7 +45,9 @@ flowchart LR
 - `pick_shots()` and `build_messages()`: build few-shot prompts from the train files.
 - `generate()`: greedy generation in batches with the model's chat template.
 - `parse_severity()` and `parse_technique()`: take the first severity word or technique id in the output, ignoring case.
-- `severity_metrics()`: accuracy, accuracy on parseable outputs, macro-F1, per-class scores and the confusion matrix.
+- `severity_metrics()`: accuracy, accuracy on parseable outputs, macro-F1, per-class scores, the confusion matrix and the sample count `n`.
+- `severity_by_source()`: runs `severity_metrics()` for all samples, for `cvss_source = nvd` and for `cvss_source = cna`. The result JSON keeps the all-samples numbers under `severity` and the three groups under `severity_by_source`. An empty group gives `n = 0` and no scores. If the test file has no source information, the JSON says so in a `note`.
+- The source is read from a separate `meta` field of each test line (`{"id": ..., "cvss_source": ...}`). The chat `messages` are unchanged, and `train.py` ignores `meta`. The predictions file also stores `cvss_source` per example.
 - `attack_metrics()`: exact-match and parent-technique accuracy, and how many predicted ids do not exist in my data.
 - `hallucination_check()`: asks about made-up CVE ids and counts how often the model gives a severity anyway.
 - Saves `results/<name>.json`, a predictions file and the plots.
@@ -68,6 +71,10 @@ To use the balanced test file: add `--severity-test data/processed/severity_test
 | Severity accuracy | Pending | Pending | Pending |
 | Severity macro-F1 | Pending | Pending | Pending |
 | Severity unparseable | Pending | Pending | Pending |
+| Severity accuracy, NVD labels only (n = Pending) | Pending | Pending | Pending |
+| Severity macro-F1, NVD labels only | Pending | Pending | Pending |
+| Severity accuracy, CNA labels only (n = Pending) | Pending | Pending | Pending |
+| Severity macro-F1, CNA labels only | Pending | Pending | Pending |
 | ATT&CK exact match | Pending | Pending | Pending |
 | ATT&CK parent-technique | Pending | Pending | Pending |
 | ATT&CK unparseable | Pending | Pending | Pending |

@@ -84,6 +84,8 @@ Run with `src/evaluate.py`. Metrics are on the 2025 severity test set and the AT
 | Severity accuracy | TODO | TODO | TODO |
 | Severity macro-F1 | TODO | TODO | TODO |
 | Severity unparseable outputs | TODO | TODO | TODO |
+| Severity macro-F1, NVD labels only | TODO | TODO | TODO |
+| Severity macro-F1, CNA labels only | TODO | TODO | TODO |
 | ATT&CK exact-match accuracy | TODO | TODO | TODO |
 | ATT&CK parent-technique accuracy | TODO | TODO | TODO |
 | ATT&CK unparseable outputs | TODO | TODO | TODO |
