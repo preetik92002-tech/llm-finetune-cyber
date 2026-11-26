@@ -94,6 +94,7 @@ Run time: not recorded.
 - [E05](../errors-and-fixes.md#e05): a `.part` file left behind and two collectors at once.
 - [E06](../errors-and-fixes.md#e06): the 2022 file could not be read.
 - [E13](../errors-and-fixes.md#e13): a secret shown on screen.
+- [E16](../errors-and-fixes.md#e16): the first download run was interrupted and left only an empty `.part` file.
 
 ## What I learned
 

@@ -147,12 +147,25 @@ Label source (who gave the CVSS score), before and after sampling:
 
 ![Label source per split](../images/label_source_per_split.png)
 
-**What this shows.** The label source changes a lot over time. In final train, 84.0% of labels are NVD scores. In the natural test file, 62.1% are CNA scores. The model is trained mostly on NVD-style labels and tested mostly on CNA-style labels. I have not checked why the mix shifts. A drop in test score could come from this shift and not from the model. I will report the NVD and CNA parts of the test set separately when I evaluate.
+**Limitation: the label-source shift.** The share of CNA labels grows a lot over time:
+
+| Split | CNA share before sampling | CNA share after sampling |
+|---|---|---|
+| train | 15.0% | 16.0% |
+| val | 50.6% | 50.4% |
+| test (natural) | 61.7% | 62.1% |
+| test (balanced) | n/a | 63.7% |
+
+The model is trained mostly on NVD-style labels and tested mostly on CNA-style labels. I have not checked why the mix shifts. A drop in test score could come from this shift and not from the model. `evaluate.py` reports every severity metric for all samples, for NVD labels only and for CNA labels only, so I can tell the two apart.
+
+**Other numbers from the stats file.** The 2 NONE records (both CNA scores) were dropped ([E14](../errors-and-fixes.md#e14)). The near-duplicate step removed 8,574 records after exact dedup removed 7,546 ([E15](../errors-and-fixes.md#e15)).
 
 ## Errors faced in this stage
 
 - [E07](../errors-and-fixes.md#e07): `datasketch` was not installed.
 - [E11](../errors-and-fixes.md#e11): the second script overwrote the first script's stats file.
+- [E14](../errors-and-fixes.md#e14): the 2 NONE records.
+- [E15](../errors-and-fixes.md#e15): what the near-duplicate step removed, and why the leak check found nothing.
 
 ## What I learned
 

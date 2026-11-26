@@ -62,7 +62,7 @@ Data only. There are no model results yet. Full tables are in [metrics.md](docs/
 
 **CVE dataset:** after duplicate removal 122,752 records remain (7,546 exact and 8,574 near-duplicates removed). Final sets: train 7,343 (2,000 each of CRITICAL, HIGH, MEDIUM and 1,343 LOW), validation 1,000, natural test 1,000 and balanced test 600 (150 per class). The train-leak check removed 0 records. The natural validation and test files hold only 17 and 26 LOW examples.
 
-**Label source:** NVD 90,275, CNA 48,599 overall. It shifts between splits: final train is 84.0% NVD scores (6,170 of 7,343), the natural test file is 62.1% CNA scores (621 of 1,000). This is the biggest data problem I have found so far.
+**Label source:** NVD 90,275, CNA 48,599 overall. It shifts between splits: CNA scores are 16.0% of final train (1,173 of 7,343) but 62.1% of the natural test file (621 of 1,000). This is the biggest data problem I have found so far.
 
 ![Label source per split](docs/images/label_source_per_split.png)
 
@@ -99,7 +99,7 @@ Training and evaluation run on Google Colab with `requirements-train.txt` (see [
 
 - **No model has been trained or evaluated.** There are no metrics. Stages 05 to 09 are code and plans.
 - **Labels are CVSS scores, not ground truth.** They are partly a judgement and can differ between the NVD and CNAs. About 65% of the cleaned records have an NVD score and about 35% a CNA score.
-- **The label source shifts between train and test.** Final train is 84.0% NVD scores and the natural test file is 62.1% CNA scores. A lower test score could come from this shift and not from the model. I have not checked why the mix shifts.
+- **The label source shifts between train and test.** Final train has 16.0% CNA scores (1,173 of 7,343), validation 50.4% and the natural test file 62.1% (621 of 1,000). Before sampling it is 15.0% CNA in train and 61.7% in test. The model learns mostly NVD-style labels and is tested mostly on CNA-style ones, so a lower test score could come from this shift and not from the model. I have not checked why the mix shifts. `evaluate.py` reports the metrics per label source to separate the two.
 - **The classes are uneven.** LOW is about 2% of the cleaned records, and the natural validation and test files hold only 17 and 26 LOW examples, so LOW scores there are noisy. The balanced test file (150 per class) is the check for rare classes.
 - **A description does not always hold what the score depends on,** so some severity errors cannot be avoided from text alone.
 - **CVEs without a v3 score are dropped,** which can bias the data.

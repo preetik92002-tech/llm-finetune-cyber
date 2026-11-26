@@ -190,3 +190,21 @@ Commit: `f004ff8` (14:45).
 **What is still open.** The current `severity_*.jsonl` files were written before this change and have no `meta`. I have to run `python src\build_cve_dataset.py` again. The seed is unchanged, so the sampled examples should stay the same. All per-source scores are Pending until an evaluation runs on Colab.
 
 **What I learned.** Keep extra information next to the model input, not inside it. Then the same file serves training and analysis.
+
+---
+
+## Session 10: Documentation refresh from the stats files
+
+**Goal.** Make every data number in the docs match `data/processed/stats_cve.json` and `stats_attack.json`, and write down what the numbers taught me.
+
+**What I did.** Re-read both stats files, checked [metrics.md](metrics.md) and the data stage pages against them, regenerated the charts with `python src/make_figures.py`, and added the entries [E14](errors-and-fixes.md#e14), [E15](errors-and-fixes.md#e15) and [E16](errors-and-fixes.md#e16). The ATT&CK numbers were unchanged: 16,423 examples, split 13,139 / 1,642 / 1,642.
+
+**What the numbers say.**
+- **The NONE class (E14).** Only 2 records had severity NONE, and both had CNA scores. Dropping them took the loaded count from 138,874 to 138,872.
+- **The near-duplicate step (E15).** Exact dedup removed 7,546 records and near-dedup removed 8,574 more, leaving 122,752. The leak check removed 0, because the near-dedup step had already removed copies across splits.
+- **The interrupted first run (E16).** After the first download run, `data/raw/` held only an empty `.part` file for 2022, so the stages after it had nothing to read. This is the same family of problem as E05, E06 and E08.
+- **The label-source shift.** The share of CNA labels is 16.0% in final train (1,173 of 7,343), 50.4% in validation and 62.1% in the natural test file (621 of 1,000). Before sampling it is 15.0% in train and 61.7% in test. I added this as a limitation in the root README, stages 03 and 04 and the model card. I have not checked why the mix shifts.
+
+**What I learned.** Reading the stats file line by line found a problem (the shift) that the totals hid. The filters need their class counts checked, not only their record counts.
+
+**Still open.** Re-run `clean_cves.py` so its stats file is script-written and includes the NONE step. Re-run `build_cve_dataset.py` to add the `meta` field to the severity files. All model results are Pending.

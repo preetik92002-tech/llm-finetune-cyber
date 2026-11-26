@@ -54,7 +54,7 @@ Dataset sizes:
 | ATT&CK | 13,139 | 1,642 | 1,642 |
 | Severity | 7,343 (2,000 each CRITICAL, HIGH, MEDIUM; 1,343 LOW) | 1,000 | 1,000 natural, plus 600 balanced (150 per class) |
 
-The ATT&CK numbers come from `data/processed/stats.json`. Of the techniques in validation and test, 9 each do not appear in train. The severity numbers come from `data/processed/stats_cve.json`. In the final train set 84.0% of the labels are NVD scores, while the natural test set is 62.1% CNA scores (see Limitations).
+The ATT&CK numbers come from `data/processed/stats.json`. Of the techniques in validation and test, 9 each do not appear in train. The severity numbers come from `data/processed/stats_cve.json`. CNA scores are 16.0% of the final train set but 62.1% of the natural test set (see Limitations).
 
 ## Training setup
 
@@ -97,7 +97,7 @@ Ablations (LoRA rank 8, 16, 64; 500, 2000, 5000 training examples): TODO: no run
 
 - Labels are CVSS scores, which are partly a judgement and can differ between NVD and CNAs. The model learns those labels, not the truth about a flaw.
 - A CVE description does not always contain what the score is based on, so some severity errors cannot be avoided from text alone.
-- The label source shifts between splits: the final train set is 84.0% NVD scores and the natural test set is 62.1% CNA scores. A lower test score may come from this shift and not from the model.
+- The label source shifts between splits: CNA scores are 16.0% of the final train set but 62.1% of the natural test set. A lower test score may come from this shift and not from the model. Per-source metrics (NVD only, CNA only) are reported next to the overall ones.
 - The natural validation and test sets hold only 17 and 26 LOW examples, so LOW scores there are noisy. The balanced test set has 150 per class.
 - CVEs without a v3 score were dropped, which may bias the data.
 - The model was trained to always answer with a label. It may give a confident severity or technique for input it cannot know, including made-up ids. See the hallucination row above.

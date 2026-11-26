@@ -18,7 +18,7 @@ I also look at the labels, because they decide what the model can learn.
 ### What the data taught me
 
 - **The classes are very uneven.** LOW is about 2% of the records. A model that never says LOW would still get a high accuracy. That is why I will report [macro-F1](../glossary.md#macro-f1), which gives every class the same weight, and why I build a [class-balanced](../glossary.md#class-balancing) test set in stage 04.
-- **The labels come from two kinds of source.** About 65% of the scores come from the NVD and about 35% from CNAs. Different scorers may have different habits. If train and test have different mixes, the model could be judged on a different kind of label than it learned. This is a limitation, and the split is not even: after stage 04, final train is 84.0% NVD labels and the natural test file is 62.1% CNA labels (details in [stage 04](../stage-04-dataset-building/README.md)).
+- **The labels come from two kinds of source.** About 65% of the scores come from the NVD and about 35% from CNAs. Different scorers may have different habits. If train and test have different mixes, the model could be judged on a different kind of label than it learned. This is a limitation, and the split is not even: after stage 04, final train has 16.0% CNA labels and the natural test file has 62.1% CNA labels (details in [stage 04](../stage-04-dataset-building/README.md)).
 
 ![Severity class balance](../images/severity_per_split.png)
 
@@ -102,6 +102,8 @@ Source: `data/processed/stats_clean.json`, see [metrics.md](../metrics.md). The 
 
 - [E02](../errors-and-fixes.md#e02): the first raw files lacked the fields the cleaner needs.
 - [E08](../errors-and-fixes.md#e08): I ran the cleaner before the download had finished.
+- [E14](../errors-and-fixes.md#e14): a `NONE` class with only 2 records (both from a CNA).
+- [E16](../errors-and-fixes.md#e16): the interrupted first download run left nothing for the cleaner to read.
 
 ## What I learned
 

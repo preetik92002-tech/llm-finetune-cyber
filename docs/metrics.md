@@ -78,6 +78,10 @@ Label source (NVD / CNA):
 | test (natural) | 15,634 / 25,223 | 379 / 621 |
 | test (balanced) | n/a | 218 / 382 |
 
+CNA share of each split (computed from the counts above): train 15.0% before and 16.0% after sampling; val 50.6% and 50.4%; natural test 61.7% and 62.1%; balanced test 63.7% after sampling.
+
+Records removed by each CVE step (from the table above): NONE 2 (both CNA); exact duplicates 7,546; near-duplicates 8,574 (HIGH 3,412, MEDIUM 3,970, CRITICAL 1,022, LOW 170); train-leak check 0 from val and 0 from test.
+
 Configured values (`configs/dataset.json`): train cap 2000 per class, val and test cap 1000, balanced test 150 per class, near-duplicate threshold 0.85, 128 permutations, 3-word shingles, seed 42. Train 2022-01-01 to 2024-09-30, validation 2024-10-01 to 2024-12-31, test 2025.
 
 ### ATT&CK dataset
