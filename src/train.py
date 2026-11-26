@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import random
+from collections import Counter
 from pathlib import Path
 
 import torch
@@ -83,6 +84,32 @@ def build_dataset(cfg):
     return Dataset.from_list(rows)
 
 
+def dtype_summary(model, title):
+    """Print parameter counts by dtype, so a wrong dtype is visible BEFORE training.
+
+    - trainable: parameters that get gradients (the LoRA adapters, and anything else
+      left trainable). With fp16 mixed precision these must be float32.
+    - not quantized: embeddings, norms, lm_head and similar. This is the dtype of the
+      base model's non-quantized layers.
+    - 4-bit packed: the quantized weights. bitsandbytes stores them as uint8.
+    Returns the trainable counts by dtype name.
+    """
+    trainable, not_quantized, packed = Counter(), Counter(), 0
+    for _, p in model.named_parameters():
+        name = str(p.dtype).replace("torch.", "")
+        if p.requires_grad:
+            trainable[name] += p.numel()
+        if p.dtype == torch.uint8:
+            packed += p.numel()
+        else:
+            not_quantized[name] += p.numel()
+    print(f"[dtypes] {title}")
+    print(f"  trainable parameters by dtype:       {dict(trainable) or 'none'}")
+    print(f"  not-quantized parameters by dtype:   {dict(not_quantized) or 'none'}")
+    print(f"  4-bit packed weights (uint8):        {packed:,}")
+    return trainable
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True, help="path to a YAML config")
@@ -135,7 +162,15 @@ def main():
         device_map={"": 0},  # put the whole model on GPU 0
         dtype=compute_dtype,  # dtype of the non-quantized weights; "torch_dtype" is the deprecated name
     )
-    # Gets a 4-bit model ready for training (casts some layers, enables gradient checkpointing hooks).
+    # On a GPU without bf16 the base model must be loaded as float16, never "auto":
+    # "auto" would take the dtype saved in the checkpoint, which is bfloat16 for Qwen.
+    print(f"Model config dtype: {getattr(model.config, 'dtype', None) or getattr(model.config, 'torch_dtype', None)}")
+    dtype_summary(model, "base model right after loading (non-quantized layers show the load dtype)")
+    if not use_bf16 and any(p.dtype == torch.bfloat16 for p in model.parameters()):
+        raise SystemExit("The base model has bfloat16 parameters although this GPU has no bf16 support.")
+
+    # Gets a 4-bit model ready for training (freezes the base weights, may cast some
+    # layers, enables gradient checkpointing hooks). The summaries below show the result.
     model = prepare_model_for_kbit_training(model)
 
     # ---- LoRA: small trainable adapters on top of the frozen model ----
@@ -204,6 +239,33 @@ def main():
         processing_class=tokenizer,  # applies the chat template and tokenizes
         peft_config=peft_config,  # wraps the model with LoRA adapters
     )
+
+    # ---- Check and fix the dtype of the trainable parameters ----
+    # The trainer has now created the PEFT model (base model + LoRA adapters).
+    # With fp16 mixed precision, PyTorch's gradient scaler must unscale the gradients
+    # before clipping them, and its kernel only works on float32 or float16 gradients
+    # of float32 parameters. A trainable parameter left in bfloat16 fails there with
+    # '"_amp_foreach_non_finite_check_and_unscale_cuda" not implemented for BFloat16'.
+    # The usual rule for fp16 + LoRA is: keep the frozen base in fp16, train the
+    # small adapters in float32.
+    # TRL's model_init_kwargs only matters when the model is passed as a string. Here a
+    # loaded model is passed, so it is unused. Check anyway that it holds no bfloat16.
+    init_kwargs = getattr(args, "model_init_kwargs", None) or {}
+    print(f"SFTConfig model_init_kwargs: {init_kwargs or 'not set (unused: the model is already loaded)'}")
+    print(f"Trainer precision flags: fp16={args.fp16}, bf16={args.bf16}")
+    if not use_bf16 and "bfloat16" in str(init_kwargs):
+        raise SystemExit("model_init_kwargs asks for bfloat16 on a GPU without bf16 support.")
+
+    dtype_summary(trainer.model, "BEFORE the float32 cast (after the PEFT model was created)")
+    if not use_bf16:
+        for p in trainer.model.parameters():
+            if p.requires_grad and p.dtype in (torch.float16, torch.bfloat16):
+                p.data = p.data.to(torch.float32)  # same Parameter object, so the optimizer will see it
+        trainable = dtype_summary(trainer.model, "AFTER the float32 cast")
+        # Stop here, not after minutes of training, if any trainable parameter is still 16-bit.
+        assert "bfloat16" not in trainable, f"Trainable bfloat16 parameters remain: {dict(trainable)}"
+        assert "float16" not in trainable, f"Trainable float16 parameters remain: {dict(trainable)}"
+
     train_result = trainer.train()
 
     # Save the loss history and run time so docs and figures can use them

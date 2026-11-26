@@ -58,6 +58,7 @@ The loss chart `docs/images/training_loss.png` is created by `python src/make_fi
 
 - [E09](../errors-and-fixes.md#e09): the training packages are not installed on my laptop, which has no GPU.
 - [E17](../errors-and-fixes.md#e17): bf16 was chosen on a T4, which only supports fp16. `train.py` now picks the precision from the GPU's compute capability and prints it at the start.
+- [E18](../errors-and-fixes.md#e18): trainable parameters were still bfloat16 in an fp16 run. `train.py` now prints the dtypes, casts the trainable parameters to float32 and asserts none is 16-bit.
 
 ## What I learned
 

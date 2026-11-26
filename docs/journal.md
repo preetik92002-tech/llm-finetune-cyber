@@ -222,3 +222,21 @@ Commit: `f004ff8` (14:45).
 **What I checked.** The code compiles, `SFTConfig` accepts the new arguments, and the rule picks fp16 for 7.5 and bf16 for 8.0 and above. The real T4 run is Pending.
 
 **What I learned.** Ask the hardware what it can do. A "supported" flag in a library can mean "works by emulation".
+
+---
+
+## Session 12: bfloat16 parameters left in an fp16 run
+
+**What happened.** After the precision fix (session 11), the T4 run printed "Precision: fp16" and the backward pass worked. Then `trainer.train()` failed in gradient clipping with `"_amp_foreach_non_finite_check_and_unscale_cuda" not implemented for 'BFloat16'` ([E18](errors-and-fixes.md#e18)).
+
+**How I found the cause.** The error names the gradient scaler of fp16 mixed precision and the type BFloat16. So some trainable parameters still had the bfloat16 type. I do not yet know which component created them. The model is loaded as float16, so the adapters were probably created or cast somewhere in the PEFT and TRL setup.
+
+**What fixed it.** `train.py` now shows and fixes the dtypes.
+- It prints the parameter counts by dtype after loading, and again after the PEFT model exists.
+- Without bf16 support, it casts every trainable float16 or bfloat16 parameter to float32 (the usual rule for fp16 training with LoRA). The frozen base stays float16.
+- It prints the counts a third time, and asserts that no trainable bfloat16 or float16 parameter is left.
+- It also checks the base model and `model_init_kwargs` for bfloat16.
+
+**What I checked.** On a tiny CPU model with bfloat16 adapters, the cast turned all trainable parameters into float32 and the assertions passed. The real T4 run is Pending. Its printed counts will show where the bfloat16 came from.
+
+**What I learned.** Print the dtype of the parameters before a long run. A precision flag does not guarantee the parameters have that precision.

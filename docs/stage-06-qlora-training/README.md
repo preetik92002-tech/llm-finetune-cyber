@@ -57,6 +57,7 @@ python src/train.py --config configs/qlora_main.yaml
 
 - [E09](../errors-and-fixes.md#e09): the training stack is for Colab, not the laptop.
 - [E17](../errors-and-fixes.md#e17): the T4 has no bf16 support. Precision now follows the GPU (fp16 below compute capability 8, bf16 from 8).
+- [E18](../errors-and-fixes.md#e18): trainable parameters in bfloat16 broke fp16 gradient clipping. They are now cast to float32 before training.
 
 ## What I learned
 
